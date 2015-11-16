@@ -3,6 +3,7 @@ package com.iheart.play.akka
 import org.specs2.mutable.Specification
 import shapeless._
 import ops.hlist._
+import shapeless.ops.record.{Values, Keys}
 import syntax.singleton._
 
 object Test {
@@ -31,9 +32,18 @@ object Test {
       new RestOf[L, E :: SLT] { type Out = Rem }
   }
 
-  class Convert[L <: HList, T](f: L ⇒ T) extends RecordArgs {
-    def applyRecord(l: L): T = f(l)
+  case class Convert[R <: HList, T, K <: HList, V <: HList]
+    (f: R ⇒ T)
+    (implicit k: Keys.Aux[R, K],
+              v: Values.Aux[R, V],
+              zip: ZipWithKeys.Aux[K, V, R]) extends ProductArgs {
+    def applyProduct(vs: V): T = f(vs.zipWithKeys[K])
   }
+
+  class ConvertNamed[R <: HList, T](f: R ⇒ T) extends RecordArgs {
+    def applyRecord(r: R): T = f(r)
+  }
+
 
   class PartialHandlerConstructor[T, Repr <: HList, ExtractedRepr <: HList, InputRepr <: HList]
     (extractor: RawReq ⇒ ExtractedRepr)
@@ -60,6 +70,15 @@ object Test {
 class HandlerSpec extends Specification {
   import Test._
 
+  "Convert" should {
+    "convert from r" in {
+      case class MyClass(a: Int, b: Int)
+      val g = LabelledGeneric[MyClass]
+      val c = Convert(g.from)
+      c(1,  2)  === MyClass(1, 2)
+    }
+  }
+
 
   "handler" should {
     "generate action functions" in {
@@ -72,10 +91,9 @@ class HandlerSpec extends Specification {
 
       val action = handler1(dir)
 
-      val converted = new Convert(action.apply)
+      val converted = Convert(action.apply)
 
-      val result = converted(name = "big", userId = "aId")
-
+      val result = converted("big", "aId")
 
       result(RawReq("anewiP")) === Result("true", "big")
     }
