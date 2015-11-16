@@ -1,0 +1,19 @@
+[core]
+	repositoryformatversion = 0
+	filemode = true
+	bare = false
+	logallrefupdates = true
+	ignorecase = true
+	precomposeunicode = true
+[remote "origin"]
+	url = git@github.com:iheartradio/play-akka.git
+	fetch = +refs/heads/*:refs/remotes/origin/*
+[remote "kai"]
+	url = git@github.com:kailuowang/play-akka.git
+	fetch = +refs/heads/*:refs/remotes/kai/*
+[branch "master"]
+	remote = kai
+	merge = refs/heads/master
+[branch "iheart"]
+	remote = origin
+	merge = refs/heads/master
