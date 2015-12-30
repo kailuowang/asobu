@@ -3,6 +3,7 @@ package asobu.dsl
 import play.api.mvc.Request
 
 import scala.concurrent.Future
+import CatsInstances._
 
 object Processor {
 
@@ -19,7 +20,6 @@ object Processor {
 trait ProcessorOps {
 
   implicit class processorOps[-RMT, +PRT](self: Processor[RMT, PRT]) {
-    import scala.concurrent.ExecutionContext.Implicits.global
 
     def combine[T](f: Processor[PRT, T]): Processor[RMT, T] = (req: Request[RMT]) ⇒ {
       self(req).flatMap { (pr: PRT) ⇒

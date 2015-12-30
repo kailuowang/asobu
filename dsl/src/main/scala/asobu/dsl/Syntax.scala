@@ -9,12 +9,13 @@ import shapeless.HList
 
 import scala.concurrent.Future
 import scala.reflect.ClassTag
-
 trait CompositionSyntax
-  extends ProcessorOps
-  with DirectiveOps
-  with ExtractorOps
-  with cats.syntax.SemigroupSyntax {
+    extends ProcessorOps
+    with DirectiveOps
+    with ExtractorOps
+    with ExtractorBuilderSyntax
+    with CatsInstances
+    with cats.syntax.AllSyntax {
 
   class processorBuilder[RMT] {
     def using[T](t: T)(implicit b: AskableBuilder[T]) = Processor[RMT, Any](b(t))
@@ -60,8 +61,6 @@ trait CompositionSyntax
     def respondJson(r: Results#Status)(implicit writes: Writes[RMT]): Directive[RMT] = respond(t ⇒ r.apply(Json.toJson(t)))
   }
 
-  def from[Repr <: HList] = Extractor.apply[Repr] _
-
   def fromAuthorized[AuthInfoT](ba: RequestHeader ⇒ Future[Either[String, AuthInfoT]]) = new AuthInfoExtractorBuilder[AuthInfoT](ba)
 
 }
@@ -77,3 +76,4 @@ object SyntaxFacilitators {
 }
 
 object Syntax extends Syntax
+

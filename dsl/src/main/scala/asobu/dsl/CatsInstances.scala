@@ -1,19 +1,9 @@
 package asobu.dsl
 
-import cats.Monad
 import cats.functor.Contravariant
 
-import scala.concurrent.Future
-
-object CatsInstances {
-
-  implicit val futureMonad: Monad[Future] = new Monad[Future] {
-    import scala.concurrent.ExecutionContext.Implicits.global
-
-    def pure[A](x: A): Future[A] = Future.successful(x)
-
-    def flatMap[A, B](fa: Future[A])(f: (A) ⇒ Future[B]): Future[B] = fa flatMap f
-  }
+trait CatsInstances extends cats.std.AllInstances {
+  implicit val ex = scala.concurrent.ExecutionContext.Implicits.global
 
   implicit def partialFunctionContravariant[R]: Contravariant[PartialFunction[?, R]] =
     new Contravariant[PartialFunction[?, R]] {
@@ -24,3 +14,6 @@ object CatsInstances {
     }
 
 }
+
+object CatsInstances extends CatsInstances
+

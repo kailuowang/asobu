@@ -1,20 +1,30 @@
 package asobu.dsl.extractors
 
-import cats.data.Xor
-import asobu.dsl.Extractor
-import play.api.mvc.RequestHeader
+import cats.data.{Kleisli, XorT, Xor}
+import asobu.dsl.{ExtractResult, Extractor}
+import ExtractResult._
+import cats.sequence.RecordSequencer
+import play.api.mvc.{Result, RequestHeader}
 import play.api.mvc.Results._
-import shapeless.HList
-
+import shapeless._; import syntax.singleton._; import record._; import labelled.{FieldType, field}
 import scala.concurrent.Future
+import asobu.dsl.CatsInstances._
 
 class AuthInfoExtractorBuilder[AuthInfoT](buildAuthInfo: RequestHeader ⇒ Future[Either[String, AuthInfoT]]) {
-  import scala.concurrent.ExecutionContext.Implicits.global
 
-  def apply[Repr <: HList](toRecord: AuthInfoT ⇒ Repr): Extractor[Repr] = { req ⇒
-    buildAuthInfo(req).map {
-      case Left(msg)       ⇒ Xor.Left(Unauthorized(msg))
-      case Right(authInfo) ⇒ Xor.Right(toRecord(authInfo))
+  def apply[Repr <: HList](toRecord: AuthInfoT ⇒ Repr): Extractor[Repr] =
+    apply().map(toRecord)
+
+  def apply(): Extractor[AuthInfoT] = Kleisli(
+    buildAuthInfo.andThen(_.map(_.left.map(Unauthorized(_)))).andThen(fromEither)
+  )
+
+  object from extends RecordArgs {
+    def applyRecord[Repr <: HList, Out <: HList](repr: Repr)(
+      implicit
+      seq: RecordSequencer.Aux[Repr, AuthInfoT ⇒ Out]
+    ): Extractor[Out] = {
+      apply(seq(repr))
     }
   }
 }

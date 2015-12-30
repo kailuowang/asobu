@@ -17,12 +17,13 @@ val commonSettings = Seq(
 
 lazy val example = (project in file("."))
   .settings(
-    name := "play-akka-cluster"
+    name := "asobu-example"
   )
   .aggregate(api, frontend, backend)
   
 lazy val frontend = (project in file("frontend"))
   .dependsOn(asobuDSL)
+  .dependsOn(asobuDistributed)
   .dependsOn(asobuDSLAkka)
   .enablePlugins(PlayScala, BuildInfoPlugin, JavaAppPackaging)
     .settings(
@@ -41,7 +42,9 @@ lazy val frontend = (project in file("frontend"))
     ).dependsOn(api)
 
 lazy val backend = (project in file("backend"))
-    .enablePlugins(BuildInfoPlugin, JavaAppPackaging)
+  .dependsOn(asobuDSL)
+  .dependsOn(asobuDistributed)
+  .enablePlugins(BuildInfoPlugin, JavaAppPackaging)
     .settings(
         name := "cluster-akka-backend",
         libraryDependencies ++= Dependencies.backend,
@@ -59,14 +62,16 @@ lazy val backend = (project in file("backend"))
     ).dependsOn(api)
     
 lazy val api = (project in file("api"))
-    .enablePlugins(BuildInfoPlugin)
-    .settings(
+  .dependsOn(asobuDistributed)
+  .enablePlugins(BuildInfoPlugin)
+  .settings(
         name := "cluster-api",
         libraryDependencies ++= Dependencies.backend,
         commonSettings
     )
 
 lazy val asobuDSL = ProjectRef(file("../"), "asobu-dsl")
+lazy val asobuDistributed = ProjectRef(file("../"), "asobu-distributed")
 lazy val asobuDSLAkka = ProjectRef(file("../"), "asobu-dsl-akka")
 
 //

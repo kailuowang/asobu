@@ -1,49 +1,79 @@
 package asobu.dsl
 
-import cats.data.{Xor, XorT}
+import cats.data.{Kleisli, Xor, XorT}
 import play.api.mvc.Results._
 import play.api.mvc.{AnyContent, Request, Result}
-import shapeless.ops.hlist.Prepend
-import shapeless.{HList, HNil}
+import shapeless.ops.hlist._
+import shapeless._
 
 import scala.concurrent.Future
 import scala.util.{Failure, Success, Try}
-import cats.data.Xor._
+import ExtractResult._
+import cats.syntax.all._
+import CatsInstances._
+import cats.sequence._
 
-object Extractor {
+object Extractor extends ExtractorBuilderSyntax {
+  val empty: Extractor[HNil] = apply(_ ⇒ HNil)
 
-  def fromTry[Repr <: HList](f: Request[AnyContent] ⇒ Try[Repr]): Extractor[Repr] = { req ⇒
-    Future.successful {
-      f(req) match {
-        case Success(repr) ⇒ Right(repr)
-        case Failure(ex)   ⇒ Left(BadRequest(ex.getMessage))
-      }
+  def apply[T](f: Request[AnyContent] ⇒ T): Extractor[T] = f map pure
+
+  implicit def fromFunction[T](f: Request[AnyContent] ⇒ ExtractResult[T]): Extractor[T] = Kleisli(f)
+
+  implicit def fromFunctionXorT[T](f: Request[AnyContent] ⇒ XorTF[T]): Extractor[T] = f.andThen(ExtractResult(_))
+
+}
+
+trait ExtractorBuilderSyntax {
+
+  /**
+   * extractor from a list of functions
+   * e.g. from(a = (_:Request[AnyContent]).headers("aKay"))
+   */
+  object from extends shapeless.RecordArgs {
+    def applyRecord[Repr <: HList, Out <: HList](repr: Repr)(
+      implicit
+      seq: RecordSequencer.Aux[Repr, Request[AnyContent] ⇒ Out]
+    ): Extractor[Out] = {
+      Extractor(seq(repr))
     }
   }
 
-  val empty: Extractor[HNil] = apply(_ ⇒ HNil)
-
-  def apply[Repr <: HList](f: Request[AnyContent] ⇒ Repr): Extractor[Repr] = fromTry(f andThen (Try[Repr](_)))
-
-  def fromEither[Repr <: HList](f: Request[AnyContent] ⇒ Future[Either[Result, Repr]]): Extractor[Repr] = {
-    import scala.concurrent.ExecutionContext.Implicits.global
-    f.andThen(_.map(Xor.fromEither))
+  /**
+   * extractor composed of several extractors
+   * e.g. compose(a = Extractor(_.headers("aKey"))
+   * or
+   * compose(a = header("aKey"))  //header is method that constructor a more robust Extractor
+   */
+  object compose extends shapeless.RecordArgs {
+    def applyRecord[Repr <: HList, Out <: HList](repr: Repr)(
+      implicit
+      seq: RecordSequencer.Aux[Repr, Extractor[Out]]
+    ): Extractor[Out] = {
+      seq(repr)
+    }
   }
 }
 
+trait DefaultExtractorImplicits {
+  implicit val ifFailure: FallbackResult = e ⇒ BadRequest(e.getMessage)
+}
+
+object DefaultExtractorImplicits extends DefaultExtractorImplicits
+
 trait ExtractorOps {
-  import CatsInstances._
+  import Extractor._
 
   implicit class extractorOps[Repr <: HList](self: Extractor[Repr]) {
     def and[ThatR <: HList, ResultR <: HList](that: Extractor[ThatR])(
       implicit
       prepend: Prepend.Aux[Repr, ThatR, ResultR]
-    ): Extractor[ResultR] = { req ⇒
+    ): Extractor[ResultR] = { (req: Request[AnyContent]) ⇒
 
-      (for {
-        eitherRepr ← XorT(self(req))
-        eitherThatR ← XorT(that(req))
-      } yield eitherRepr ++ eitherThatR).value
+      for {
+        eitherRepr ← self.run(req)
+        eitherThatR ← that.run(req)
+      } yield eitherRepr ++ eitherThatR
     }
   }
 

@@ -1,8 +1,7 @@
 package asobu
 
-import cats.data.Xor
+import cats.data.{Kleisli, XorT}
 import play.api.mvc.{AnyContent, Request, Result}
-import shapeless.HList
 
 import scala.concurrent.Future
 
@@ -16,7 +15,7 @@ package object dsl {
 
   type Filter[-RMT] = (Request[RMT], ⇒ Future[Result]) ⇒ Future[Result]
 
-  type Extractor[+ExtractedRepr <: HList] = Request[AnyContent] ⇒ Future[Xor[Result, ExtractedRepr]]
+  type Extractor[T] = Kleisli[ExtractResult, Request[AnyContent], T]
 
 }
 

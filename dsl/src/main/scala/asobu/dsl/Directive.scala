@@ -5,9 +5,8 @@ import play.api.mvc.Results._
 
 import scala.concurrent.Future
 import scala.reflect._
-import CatsInstances._
-import cats.std.function._
 import cats.syntax.contravariant._
+import CatsInstances._
 
 object Directive {
 

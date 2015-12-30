@@ -1,5 +1,7 @@
 package asobu.dsl
 
+import asobu.dsl
+import asobu.dsl._
 import asobu.dsl.Syntax._
 import asobu.dsl.SyntaxFacilitators._
 import org.joda.time.DateTime
@@ -62,7 +64,7 @@ class SyntaxSpec extends PlaySpecification {
 
       val controller = new Controller {
         val withExtraction = handle(
-          from(req ⇒ 'name ->> req.headers("my_name") :: HNil),
+          from(name = (_: Request[AnyContent]).headers("my_name")),
           process[RequestMsg] using actor
             expectAny {
               case ResponseMsg(id, msg, _) ⇒ Ok(s"${id} ${msg}")
@@ -102,7 +104,7 @@ class SyntaxSpec extends PlaySpecification {
 
       val controller = new Controller {
         val combined = handle(
-          fromJson[PartialRequestMessage].body and from(req ⇒ 'name ->> req.headers("my_name") :: HNil),
+          fromJson[PartialRequestMessage].body and from(name = (_: Request[AnyContent]).headers("my_name")),
           process[RequestMsg] using actor next expect[ResponseMsg].respondJson(Ok(_))
         )
       }
@@ -185,7 +187,7 @@ class SyntaxSpec extends PlaySpecification {
       )
 
       val handler = handle(
-        fromAuthorized(SessionInfo)(si ⇒ 'id ->> si.sessionId :: HNil),
+        fromAuthorized(SessionInfo).from(id = (_: SessionInfo).sessionId),
         process[RequestMsg] using actor next expect[ResponseMsg].respondJson(Ok)
       )
 

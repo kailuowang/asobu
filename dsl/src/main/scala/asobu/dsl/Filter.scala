@@ -7,6 +7,7 @@ import play.api.mvc.Results._
 
 import scala.concurrent.Future
 import scala.concurrent.duration.Duration
+import CatsInstances._
 
 object Filter {
 

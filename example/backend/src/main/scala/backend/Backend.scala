@@ -1,6 +1,8 @@
 package backend
 
 import akka.actor._
+import asobu.distributed.{EndpointRegistry, EndpointRegistryProvider}
+import backend.endpoints.RegistryClient
 import com.typesafe.config.ConfigFactory
 import backend.factorial._
 import scala.collection.JavaConversions._
@@ -27,9 +29,11 @@ object Backend extends App {
   val system = ActorSystem("application", (ConfigFactory parseMap properties)
     .withFallback(ConfigFactory.load())
   )
-  
+
+  RegistryClient startOn system
   // Deploy actors and services
   FactorialBackend startOn system
+
 
   Await.result(system.whenTerminated, Duration.Inf)
 }
