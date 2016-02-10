@@ -1,9 +1,11 @@
 package asobu.distributed
 
+import play.api.mvc.RequestHeader
 import play.api.test.{FakeRequest, PlaySpecification}
 import play.core.routing.RouteParams
 
 import play.routes.compiler._
+import shapeless.HNil
 
 object EndpointSpec extends PlaySpecification {
   import play.api.http.HttpVerbs._
@@ -18,13 +20,13 @@ object EndpointSpec extends PlaySpecification {
       |
     """.stripMargin
 
-  lazy val parserResult = Endpoint.parse(EndpointDefs(routeString))
+  lazy val parserResult = Endpoint.parse(routeString, "/")
   lazy val endPoints = parserResult.right.get
-  lazy val ep1: Endpoint = endPoints(0)
-  lazy val ep2: Endpoint = endPoints(1)
+  lazy val ep1: EndpointDefinition = endPoints(0)
+  lazy val ep2: EndpointDefinition = endPoints(1)
 
   "Parse to endpoints" >> {
-    parserResult must beRight[List[Endpoint]]
+    parserResult must beRight[List[EndpointDefinition]]
     parserResult.right.get.length === 2
 
     "parse comments" >> {
@@ -42,21 +44,34 @@ object EndpointSpec extends PlaySpecification {
 
   }
 
-  "find Handler with pathParameters" >> {
-    val expectedParams = RouteParams(Map("n" → Right("3")), Map())
-    ep1.matchHandler(FakeRequest(GET, "/ep1/a/3")) must beSome(EndpointHandler(expectedParams, ep1))
-  }
+  "unapply" >> {
 
-  "find Handler with queryParameters" >> {
-    val expectedParams = RouteParams(Map("a" → Right("3")), Map("b" → Seq("foo")))
-    ep2.matchHandler(FakeRequest(GET, "/ep2/3/something?b=foo")) must beSome(EndpointHandler(expectedParams, ep2))
-  }
+    def extractParams(epd: EndpointDefinition, request: RequestHeader): Option[RouteParams] = {
+      val endpoint = Endpoint(epd)
+      request match {
+        case endpoint(params) ⇒ Some(params)
+        case _                ⇒ None
+      }
+    }
 
-  "does not find Handler for unmatched method" >> {
-    ep2.matchHandler(FakeRequest(POST, "/ep2/3/something?b=foo")) must beNone
-  }
-  "does not find Handler for unmached path" >> {
-    ep2.matchHandler(FakeRequest(GET, "/epnotfound")) must beNone
+    "finds pathParameters" >> {
+      extractParams(ep1, FakeRequest(GET, "/ep1/a/3")) must
+        beSome(RouteParams(Map("n" → Right("3")), Map()))
+    }
+
+    "finds queryParameters" >> {
+      extractParams(ep2, FakeRequest(GET, "/ep2/3/something?b=foo")) must
+        beSome(RouteParams(Map("a" → Right("3")), Map("b" → Seq("foo"))))
+    }
+
+    "does not find when method does not match " >> {
+      extractParams(ep2, FakeRequest(POST, "/ep2/3/something?b=foo")) must beNone
+    }
+
+    "does not find when path does not match " >> {
+      extractParams(ep2, FakeRequest(GET, "/unknownendpoint")) must beNone
+    }
+
   }
 
 }
