@@ -1,7 +1,14 @@
 import NativePackagerHelper._
 
+val resolverSetting = resolvers ++= Seq(
+  Resolver.sonatypeRepo("releases"),
+  Resolver.sonatypeRepo("snapshots"),
+  Resolver.bintrayRepo("scalaz", "releases")
+)
+
+
 val commonSettings = Seq(
-  organization := "your.organization",
+  organization := "asobu",
   version := "2.4.3",
   scalaVersion := "2.11.7",
   //scalaVersion := "2.10.4",
@@ -12,7 +19,8 @@ val commonSettings = Seq(
   buildInfoKeys := Seq[BuildInfoKey](
     name, version, scalaVersion,
     "sbtNativePackager" -> "1.0.0"
-  )
+  ),
+  resolverSetting
 )
 
 lazy val example = (project in file("."))

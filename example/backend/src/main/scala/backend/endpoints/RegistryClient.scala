@@ -20,16 +20,8 @@ import scala.concurrent.duration._
 
 class RegistryClient(registry: ActorRef) extends Actor with ActorLogging {
 
-  val fW = Witness('wang)
 
-  def receive: Receive = {
-    case Test ⇒
-      registry ! RemoteHandlerDef(name = "Test", HeaderExtractors.sHeader('wang))
-
-
-    case Extracted(rep: (FieldType[fW.T, String] :: HNil)) ⇒
-      log.info(rep('wang).toString + "---------------------------")
-  }
+  def receive: Receive = ???
 }
 
 
