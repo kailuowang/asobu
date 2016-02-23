@@ -3,7 +3,7 @@ package asobu.distributed
 import java.io.File
 
 import akka.actor.{ActorSelection, ActorRef}
-import asobu.dsl.Extractor
+import asobu.dsl.{ExtractResult, Extractor}
 import play.api.mvc.{Request, AnyContent, Handler, RequestHeader}
 import play.core.routing
 import play.core.routing.Route.ParamsExtractor
@@ -22,6 +22,9 @@ trait EndpointHandler {
   def handle(routeParams: RouteParams, request: Request[AnyContent]): Future[Response]
 }
 
+/**
+ * Endpoint definition by the remote handler
+ */
 trait EndpointDefinition {
   /**
    * type of the Message
@@ -29,13 +32,23 @@ trait EndpointDefinition {
   type T
   val routeInfo: Route
   val prefix: String
-  val extractor: Extractor[T]
+  def extract(routeParams: RouteParams, request: Request[AnyContent]): ExtractResult[T]
   def remoteActor: ActorSelection
 }
 
-case class EndpointDefinitionImpl[Repr <: HList](routeInfo: Route, prefix: String, extractor: Extractor[Repr]) extends EndpointDefinition {
+object EndpointDefinition {
+  type Aux[T0] = EndpointDefinition { type T = T0 }
+}
+
+case class EndpointDefinitionImpl[Repr <: HList](
+    routeInfo: Route,
+    prefix: String,
+    extractor: Extractor[Repr]
+) extends EndpointDefinition {
   type T = Repr
   def remoteActor: ActorSelection = ???
+
+  def extract(routeParams: RouteParams, request: Request[AnyContent]): ExtractResult[Repr] = ???
 }
 
 case class Endpoint(definition: EndpointDefinition) extends EndpointRoute with EndpointHandler {
@@ -48,10 +61,9 @@ case class Endpoint(definition: EndpointDefinition) extends EndpointRoute with E
     if (prefix.endsWith("/")) "" else "/"
   }
 
-  private lazy val routeExtractors: ParamsExtractor = {
-    val localParts = if (path.parts.nonEmpty) StaticPart(defaultPrefix) +: path.parts else Nil
-    routing.Route(verb.value, routing.PathPattern(toCPart(StaticPart(prefix) +: localParts)))
-  }
+  def unapply(requestHeader: RequestHeader): Option[RouteParams] = routeExtractors.unapply(requestHeader)
+
+  def handle(routeParams: RouteParams, request: Request[AnyContent]): Future[Response] = ???
 
   lazy val documentation: (String, String, String) = {
     val localPath = if (routeInfo.path.parts.isEmpty) ""
@@ -60,8 +72,10 @@ case class Endpoint(definition: EndpointDefinition) extends EndpointRoute with E
     (verb.toString, pathInfo, call.toString)
   }
 
-  def unapply(requestHeader: RequestHeader): Option[RouteParams] = routeExtractors.unapply(requestHeader)
-  def handle(routeParams: RouteParams, request: Request[AnyContent]): Future[Response] = ???
+  private lazy val routeExtractors: ParamsExtractor = {
+    val localParts = if (path.parts.nonEmpty) StaticPart(defaultPrefix) +: path.parts else Nil
+    routing.Route(verb.value, routing.PathPattern(toCPart(StaticPart(prefix) +: localParts)))
+  }
 
   implicit private def toCPart(parts: Seq[PathPart]): Seq[routing.PathPart] = parts map {
     case DynamicPart(n, c, e) ⇒ routing.DynamicPart(n, c, e)

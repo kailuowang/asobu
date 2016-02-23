@@ -1,7 +1,7 @@
 package asobu.dsl
 
 import asobu.dsl.ExtractResult._
-import cats.Monad
+import cats.{FlatMap, Monad}
 import cats.data.{Xor, XorT}
 import cats.syntax.all._
 import play.api.mvc.{AnyContent, Request, Result}
@@ -23,13 +23,13 @@ case class ExtractResult[T](v: XorTF[T]) {
    * @return
    */
   def value: Future[Xor[Result, T]] = v.value
+
 }
 
 object ExtractResult {
   type XorTF[T] = XorT[Future, Result, T]
   import CatsInstances._
 
-  implicitly[Monad[Future]]
   @implicitNotFound("need an implicit way of handling Throwable as Result. You can import asobu.dsl.DefaultExtractorImplicits._ for a default simple implementation")
   type FallbackResult = Throwable ⇒ Result
 
@@ -55,7 +55,11 @@ object ExtractResult {
     XorT.fromXor[Future](Xor.fromTry(t).leftMap(ifFailure))
 
   def fromEither[T](fe: Future[Either[Result, T]]): ExtractResult[T] = {
-    ExtractResult(XorT(fe.map(Xor.fromEither)))
+    XorT(fe.map(Xor.fromEither))
+  }
+
+  def fromXor[T](xor: Xor[Result, T]): ExtractResult[T] = {
+    XorT(Future.successful(xor))
   }
 
 }
