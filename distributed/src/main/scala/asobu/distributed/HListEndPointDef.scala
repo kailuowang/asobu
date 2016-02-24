@@ -8,8 +8,9 @@ import play.core.routing.RouteParams
 import play.routes.compiler.Route
 import shapeless.HList
 import cats.implicits._
+import shapeless.ops.hlist.Prepend
 
-case class HListEndPointDef[TRepr <: HList, ParamsRepr <: HList, RequestRepr <: HList](
+case class HListEndPointDef[ParamsRepr <: HList, RequestRepr <: HList](
     prefix: String,
     routeInfo: Route,
     requestExtractor: Extractor[RequestRepr],
@@ -17,16 +18,16 @@ case class HListEndPointDef[TRepr <: HList, ParamsRepr <: HList, RequestRepr <: 
     remoteActor: ActorSelection
 )(
     implicit
-    combine: CombineTo[ParamsRepr, RequestRepr, TRepr]
+    val prepend: Prepend[ParamsRepr, RequestRepr]
 ) extends EndpointDefinition {
 
-  type T = TRepr
+  type T = prepend.Out
 
   def extract(routeParams: RouteParams, request: Request[AnyContent]): ExtractResult[T] = {
     for {
       paramsRepr ← paramsExtractor.run(routeParams)
       requestRepr ← requestExtractor.run(request)
-    } yield combine(paramsRepr, requestRepr)
+    } yield paramsRepr ++ requestRepr
   }
 
 }

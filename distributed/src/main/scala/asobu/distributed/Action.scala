@@ -2,7 +2,8 @@ package asobu.distributed
 
 import akka.actor.Actor
 import asobu.distributed.Action.{UnrecognizedMessage}
-import asobu.dsl.Extractor
+import asobu.dsl.{ExtractResult, Extractor}
+import play.api.mvc.{Result, AnyContent}
 import play.core.routing.RouteParams
 import shapeless._
 
@@ -14,13 +15,19 @@ trait Action[T] {
 
   type TRepr = gen.Repr
 
+  type BodyRepr <: HList
+
+  def extractBody(body: AnyContent): ExtractResult[BodyRepr]
+
   def endpointDefinition: EndpointDefinition
+
+  def bodyExtractor
 
   class RemoteHandler extends Actor {
     import context.dispatcher
 
     def receive: Receive = {
-      case hlist: TRepr ⇒
+      case hlist: TRepr @unchecked ⇒
 
         val t: T = gen.from(hlist)
         val replyTo = sender
@@ -31,11 +38,14 @@ trait Action[T] {
 
   }
 
-  def backend[T, R](t: T): Future[R]
+  def backend(t: T): Future[Result]
 
 }
 
 object Action {
   case object UnrecognizedMessage
 
+  case class DistributedRequest[ExtractedT, Body <: AnyContent](extracted: ExtractedT, body: Body)
+
 }
+

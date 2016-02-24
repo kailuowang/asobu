@@ -3,23 +3,27 @@ package asobu.distributed
 import java.io.File
 
 import akka.actor.{ActorSelection, ActorRef}
+import akka.util.Timeout
+import asobu.distributed.Action.DistributedRequest
 import asobu.dsl.{ExtractResult, Extractor}
-import play.api.mvc.{Request, AnyContent, Handler, RequestHeader}
+import play.api.mvc._, Results._
 import play.core.routing
 import play.core.routing.Route.ParamsExtractor
 import play.core.routing.RouteParams
-import play.mvc.Http.Response
 import play.routes.compiler._
 import shapeless.{HNil, HList}
 
-import scala.concurrent.Future
+import scala.concurrent.{ExecutionContext, Future}
+import scala.concurrent.duration._
+import akka.pattern.ask
+import cats.std.future._
 
 trait EndpointRoute {
   def unapply(requestHeader: RequestHeader): Option[RouteParams]
 }
 
 trait EndpointHandler {
-  def handle(routeParams: RouteParams, request: Request[AnyContent]): Future[Response]
+  def handle(routeParams: RouteParams, request: Request[AnyContent]): Future[Result]
 }
 
 /**
@@ -40,18 +44,11 @@ object EndpointDefinition {
   type Aux[T0] = EndpointDefinition { type T = T0 }
 }
 
-case class EndpointDefinitionImpl[Repr <: HList](
-    routeInfo: Route,
-    prefix: String,
-    extractor: Extractor[Repr]
-) extends EndpointDefinition {
-  type T = Repr
-  def remoteActor: ActorSelection = ???
-
-  def extract(routeParams: RouteParams, request: Request[AnyContent]): ExtractResult[Repr] = ???
-}
+object EmptyEnd
 
 case class Endpoint(definition: EndpointDefinition) extends EndpointRoute with EndpointHandler {
+  import ExecutionContext.Implicits.global
+
   type T = definition.T
 
   import RoutesCompilerExtra._
@@ -63,7 +60,23 @@ case class Endpoint(definition: EndpointDefinition) extends EndpointRoute with E
 
   def unapply(requestHeader: RequestHeader): Option[RouteParams] = routeExtractors.unapply(requestHeader)
 
-  def handle(routeParams: RouteParams, request: Request[AnyContent]): Future[Response] = ???
+  def handle(routeParams: RouteParams, request: Request[AnyContent]): Future[Result] = {
+
+    def handleMessageWithBackend(t: T): Future[Result] = {
+      implicit val ak: Timeout = 10.minutes //todo: find the right place to configure this
+      (remoteActor ? DistributedRequest(t, request.body)).collect {
+        case r: Result ⇒ r
+        case m         ⇒ InternalServerError(s"Unsupported result from backend ${m.getClass}")
+      }
+    }
+
+    val message = definition.extract(routeParams, request)
+    message.fold[Future[Result]](
+      Future.successful(_),
+      (t: T) ⇒ handleMessageWithBackend(t)
+    ).flatMap(identity)
+
+  }
 
   lazy val documentation: (String, String, String) = {
     val localPath = if (routeInfo.path.parts.isEmpty) ""
@@ -94,9 +107,13 @@ object Endpoint {
     val placeholderFile = new File("remote-routes") //to conform to play api
     lazy val unsupportedError = Seq(RoutesCompilationError(placeholderFile, "doesn't support anything but route", None, None))
 
+    def findEndPointDef(route: Route): EndpointDefinition = {
+      HListEndPointDef(prefix, route, Extractor.empty, RouteParamsExtractor.empty, null) //todo replace this with real implementation
+    }
+
     RoutesFileParser.parseContent(content, placeholderFile).right.flatMap { routes ⇒
       routes.traverse[Either[Seq[RoutesCompilationError], ?], EndpointDefinition] {
-        case r: Route ⇒ Right(EndpointDefinitionImpl(r, prefix, Extractor.empty))
+        case r: Route ⇒ Right(findEndPointDef(r))
         case _        ⇒ Left(unsupportedError)
       }
     }
