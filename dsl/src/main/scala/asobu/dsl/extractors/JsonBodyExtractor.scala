@@ -15,12 +15,16 @@ import Extractor._
 class JsonBodyExtractorBuilder[T: Reads] {
   // The name body is chosen for easier syntax
   def body[Repr <: HList](implicit lgen: LabelledGeneric.Aux[T, Repr]): Extractor[Repr] =
-    JsonBodyExtractor.body[T] andThen (_.map(lgen.to))
+    JsonBodyExtractor.body[T] map lgen.to
+
 }
 
 object JsonBodyExtractor {
-  def body[T: Reads]: Request[AnyContent] ⇒ ExtractResult[T] = req ⇒
-    req.body.asJson.map(_.validate[T]) match {
+  def body[T: Reads]: Extractor[T] = (req: Request[AnyContent]) ⇒
+    extractBody(req.body)
+
+  def extractBody[T: Reads](body: AnyContent): ExtractResult[T] =
+    body.asJson.map(_.validate[T]) match {
       case Some(JsSuccess(t, _)) ⇒
         pure(t)
       case Some(JsError(errors)) ⇒

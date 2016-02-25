@@ -1,51 +1,56 @@
 package asobu.distributed
 
-import akka.actor.Actor
-import asobu.distributed.Action.{UnrecognizedMessage}
+import akka.actor.{ActorSelection, Actor}
+import asobu.distributed.Action.{DistributedRequest, UnrecognizedMessage}
+import asobu.dsl.util.HListOps.{RestOf2, RestOf}
+import asobu.dsl.util.RecordOps.FieldKVs
 import asobu.dsl.{ExtractResult, Extractor}
 import play.api.mvc.{Result, AnyContent}
 import play.core.routing.RouteParams
+import play.routes.compiler.Route
 import shapeless._
+import shapeless.ops.hlist.Prepend
 
 import scala.concurrent.Future
 
-trait Action[T] {
+trait Action[TMessage] {
 
-  implicit val gen: LabelledGeneric[T]
+  val messageExtractors: Extractors[TMessage]
 
-  type TRepr = gen.Repr
+  type ExtractedRemotely = messageExtractors.LExtracted
 
-  type BodyRepr <: HList
+  def remoteActor: ActorSelection
 
-  def extractBody(body: AnyContent): ExtractResult[BodyRepr]
+  def endpointDefinition(prefix: String, route: Route): EndpointDefinition =
+    EndPointDefImpl(prefix, route, messageExtractors.remoteExtractor, remoteActor)
 
-  def endpointDefinition: EndpointDefinition
-
-  def bodyExtractor
+  def constructMessage(dr: DistributedRequest[ExtractedRemotely]): ExtractResult[TMessage]
 
   class RemoteHandler extends Actor {
     import context.dispatcher
-
+    import cats.std.future._
     def receive: Receive = {
-      case hlist: TRepr @unchecked ⇒
+      case dr: DistributedRequest[messageExtractors.LExtracted] @unchecked ⇒
 
-        val t: T = gen.from(hlist)
+        val tr = messageExtractors.localExtract(dr)
         val replyTo = sender
-        backend(t).foreach(replyTo ! _)
+        tr.map { t ⇒
+          backend(t).foreach(replyTo ! _)
+        }
 
       case _ ⇒ sender ! UnrecognizedMessage
     }
 
   }
 
-  def backend(t: T): Future[Result]
+  def backend(t: TMessage): Future[Result]
 
 }
 
 object Action {
   case object UnrecognizedMessage
 
-  case class DistributedRequest[ExtractedT, Body <: AnyContent](extracted: ExtractedT, body: Body)
+  case class DistributedRequest[ExtractedT](extracted: ExtractedT, body: AnyContent)
 
 }
 

@@ -26,24 +26,6 @@ trait EndpointHandler {
   def handle(routeParams: RouteParams, request: Request[AnyContent]): Future[Result]
 }
 
-/**
- * Endpoint definition by the remote handler
- */
-trait EndpointDefinition {
-  /**
-   * type of the Message
-   */
-  type T
-  val routeInfo: Route
-  val prefix: String
-  def extract(routeParams: RouteParams, request: Request[AnyContent]): ExtractResult[T]
-  def remoteActor: ActorSelection
-}
-
-object EndpointDefinition {
-  type Aux[T0] = EndpointDefinition { type T = T0 }
-}
-
 object EmptyEnd
 
 case class Endpoint(definition: EndpointDefinition) extends EndpointRoute with EndpointHandler {
@@ -108,7 +90,7 @@ object Endpoint {
     lazy val unsupportedError = Seq(RoutesCompilationError(placeholderFile, "doesn't support anything but route", None, None))
 
     def findEndPointDef(route: Route): EndpointDefinition = {
-      HListEndPointDef(prefix, route, Extractor.empty, RouteParamsExtractor.empty, null) //todo replace this with real implementation
+      EndPointDefImpl(prefix, route, RemoteExtractor.empty, null) //todo replace this with real implementation
     }
 
     RoutesFileParser.parseContent(content, placeholderFile).right.flatMap { routes ⇒

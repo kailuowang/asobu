@@ -44,13 +44,13 @@ object HListOps {
     }
   }
 
-  trait RestOf[L <: HList, SL <: HList] {
+  trait RestOf[FullL <: HList, ToSubtractL <: HList] {
     type Out <: HList
   }
 
   object RestOf {
 
-    type Aux[L <: HList, SL <: HList, Out0 <: HList] = RestOf[L, SL] {
+    type Aux[FullL <: HList, ToSubtractL <: HList, Out0 <: HList] = RestOf[FullL, ToSubtractL] {
       type Out = Out0
     }
 
@@ -58,5 +58,21 @@ object HListOps {
 
     implicit def hlistRestOf[L <: HList, E, RemE <: HList, Rem <: HList, SLT <: HList](implicit rt: Remove.Aux[L, E, (E, RemE)], st: Aux[RemE, SLT, Rem]): Aux[L, E :: SLT, Rem] =
       new RestOf[L, E :: SLT] { type Out = Rem }
+  }
+
+  trait RestOf2[Full <: HList, L1 <: HList, L2 <: HList] {
+    type Out <: HList
+  }
+
+  object RestOf2 {
+    type Aux[Full <: HList, L1 <: HList, L2 <: HList, Out0 <: HList] = RestOf2[Full, L1, L2] { type Out = Out0 }
+
+    implicit def mk[Full <: HList, L1 <: HList, L2 <: HList, RestOfL1 <: HList, Out0 <: HList](
+      implicit
+      r1: RestOf.Aux[Full, L1, RestOfL1],
+      r2: RestOf.Aux[RestOfL1, L2, Out0]
+    ): Aux[Full, L1, L2, Out0] = new RestOf2[Full, L1, L2] {
+      type Out = Out0
+    }
   }
 }
