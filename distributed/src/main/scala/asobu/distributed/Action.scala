@@ -2,15 +2,8 @@ package asobu.distributed
 
 import akka.actor._
 import asobu.distributed.Action.{DistributedRequest, UnrecognizedMessage}
-import asobu.distributed.Extractors.BodyExtractor
-import asobu.dsl.util.HListOps.{RestOf2, RestOf}
-import asobu.dsl.util.RecordOps.FieldKVs
-import asobu.dsl.{ExtractResult, RequestExtractor}
 import play.api.mvc.{Result, AnyContent}
-import play.core.routing.RouteParams
 import play.routes.compiler.Route
-import shapeless._
-import shapeless.ops.hlist.Prepend
 
 import scala.concurrent.Future
 
