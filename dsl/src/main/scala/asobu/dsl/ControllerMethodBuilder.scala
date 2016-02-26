@@ -22,7 +22,7 @@ trait ControllerMethodBuilder {
     ) = new handle(Extractor.empty, directive)
 
     def apply[RMT, ExtractedRepr <: HList, V <: HList](
-      extractor: Extractor[ExtractedRepr],
+      extractor: RequestExtractor[ExtractedRepr],
       directive: Directive[RMT]
     )(
       implicit
@@ -35,7 +35,7 @@ trait ControllerMethodBuilder {
    * @tparam RMT request message type
    */
   class handle[RMT, ExtractedRepr <: HList, V <: HList](
-      extractor: Extractor[ExtractedRepr],
+      extractor: RequestExtractor[ExtractedRepr],
       directive: Directive[RMT]
   )(implicit combine: CombineWithInputArgs[ExtractedRepr, V, RMT]) extends ProductArgs {
     def applyProduct(vs: V): EssentialAction = Action.async { req ⇒

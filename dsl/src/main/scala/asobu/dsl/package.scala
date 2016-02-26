@@ -16,7 +16,9 @@ package object dsl {
 
   type Filter[-RMT] = (Request[RMT], ⇒ Future[Result]) ⇒ Future[Result]
 
-  type Extractor[T] = Kleisli[ExtractResult, Request[AnyContent], T]
+  type Extractor[TFrom, T] = Kleisli[ExtractResult, TFrom, T]
+
+  type RequestExtractor[T] = Extractor[Request[AnyContent], T]
 
 }
 

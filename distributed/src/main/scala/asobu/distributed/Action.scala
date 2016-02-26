@@ -4,7 +4,7 @@ import akka.actor.{ActorSelection, Actor}
 import asobu.distributed.Action.{DistributedRequest, UnrecognizedMessage}
 import asobu.dsl.util.HListOps.{RestOf2, RestOf}
 import asobu.dsl.util.RecordOps.FieldKVs
-import asobu.dsl.{ExtractResult, Extractor}
+import asobu.dsl.{ExtractResult, RequestExtractor}
 import play.api.mvc.{Result, AnyContent}
 import play.core.routing.RouteParams
 import play.routes.compiler.Route

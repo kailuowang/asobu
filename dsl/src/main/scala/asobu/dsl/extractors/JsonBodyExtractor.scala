@@ -1,6 +1,6 @@
 package asobu.dsl.extractors
 
-import asobu.dsl.{ExtractResult, Extractor}
+import asobu.dsl.{Extractor, ExtractResult, RequestExtractor}
 import cats.data.XorT
 import play.api.libs.json.{JsResult, JsError, JsSuccess, Reads}
 import play.api.mvc.{AnyContent, Request}
@@ -14,13 +14,13 @@ import Extractor._
 
 class JsonBodyExtractorBuilder[T: Reads] {
   // The name body is chosen for easier syntax
-  def body[Repr <: HList](implicit lgen: LabelledGeneric.Aux[T, Repr]): Extractor[Repr] =
+  def body[Repr <: HList](implicit lgen: LabelledGeneric.Aux[T, Repr]): RequestExtractor[Repr] =
     JsonBodyExtractor.body[T] map lgen.to
 
 }
 
 object JsonBodyExtractor {
-  def body[T: Reads]: Extractor[T] = (req: Request[AnyContent]) ⇒
+  def body[T: Reads]: RequestExtractor[T] = (req: Request[AnyContent]) ⇒
     extractBody(req.body)
 
   def extractBody[T: Reads](body: AnyContent): ExtractResult[T] =

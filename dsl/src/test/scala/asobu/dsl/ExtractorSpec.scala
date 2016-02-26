@@ -42,7 +42,7 @@ class ExtractorSpec extends PlaySpecification {
 
     val extractor1 = fromJson[Foo].body
 
-    val extractor2 = Extractor.compose(bar3 = Extractor(_.headers("bar3")))
+    val extractor2 = Extractor.compose(bar3 = RequestExtractor(_.headers("bar3")))
 
     val extractor = extractor1 and extractor2
 

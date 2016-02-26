@@ -5,7 +5,7 @@ import javax.inject.{Inject, Provider, Singleton}
 import akka.actor._
 import akka.cluster.Cluster
 import asobu.distributed.EndpointRegistry.{Extracted, RemoteHandlerDef}
-import asobu.dsl.{Extractor, Directive}
+import asobu.dsl.{RequestExtractor, Directive}
 import cats.data.Xor
 import play.api.mvc.{Result, Headers, AnyContent, Request}
 import shapeless.HList
@@ -51,7 +51,7 @@ class EndpointRegistry extends Actor with ActorLogging {
 }
 
 object EndpointRegistry {
-  case class RemoteHandlerDef[Repr <: HList](name: String, extractor: Extractor[Repr])
+  case class RemoteHandlerDef[Repr <: HList](name: String, extractor: RequestExtractor[Repr])
   case class Extracted[Repr <: HList](r: Repr)
 }
 

@@ -4,7 +4,7 @@ import _root_.akka.actor.ActorSelection
 import asobu.distributed.Action.DistributedRequest
 import asobu.distributed.Extractors.RouteParamsExtractor
 import asobu.dsl._
-import asobu.dsl.util.HListOps.RestOf2
+import asobu.dsl.util.HListOps.{CombineTo, RestOf2}
 import cats.sequence.RecordSequencer
 import shapeless.ops.hlist.Prepend
 import asobu.dsl.util.RecordOps.{FieldKV, FieldKVs}
@@ -31,25 +31,24 @@ trait Extractors[TMessage] {
 
 object Extractors {
 
-  type RouteParamsExtractor[T] = Kleisli[ExtractResult, RouteParams, T]
-  type BodyExtractor[T] = Kleisli[ExtractResult, AnyContent, T]
+  type RouteParamsExtractor[T] = Extractor[RouteParams, T]
+
+  type BodyExtractor[T] = Extractor[AnyContent, T]
 
   class builder[TMessage](remoteActor0: ActorSelection) {
     def apply[LExtracted <: HList, LParamExtracted <: HList, LExtraExtracted <: HList, LBody <: HList, TRepr <: HList](
-      requestExtractor0: Extractor[LExtraExtracted],
+      remoteRequestExtractor: RequestExtractor[LExtraExtracted],
       bodyExtractor: BodyExtractor[LBody]
     )(implicit
       gen: LabelledGeneric.Aux[TMessage, TRepr],
-      prepend: Prepend[LParamExtracted, LExtraExtracted],
+      prepend: Prepend.Aux[LParamExtracted, LExtraExtracted, LExtracted],
       r: RestOf2.Aux[TRepr, LExtraExtracted, LBody, LParamExtracted],
-      routeParamsExtractor: RouteParamsExtractor[LParamExtracted]): Extractors[TMessage] =
+      combineTo: CombineTo[LExtracted, LBody, TRepr],
+      routeParamsExtractor: RouteParamsExtractor[LParamExtracted]): Extractors[TMessage] = new Extractors[TMessage] {
+      val remoteExtractor = RemoteExtractor(routeParamsExtractor, remoteRequestExtractor)
 
-      new Extractors[TMessage] {
-        def requestExtractor = requestExtractor0
-        val remoteExtractor = RemoteExtractor(routeParamsExtractor, requestExtractor)
-
-        def localExtract(dr: DistributedRequest[LExtracted]): ExtractResult[TMessage] = ???
-      }
+      def localExtract(dr: DistributedRequest[LExtracted]): ExtractResult[TMessage] = ???
+    }
   }
 }
 
@@ -70,7 +69,7 @@ object RemoteExtractor {
   }
   def apply[ParamsRepr <: HList, LExtraExtracted <: HList](
     paramsExtractor: RouteParamsExtractor[ParamsRepr],
-    requestExtractor: Extractor[LExtraExtracted]
+    requestExtractor: RequestExtractor[LExtraExtracted]
   )(
     implicit
     prepend: Prepend[ParamsRepr, LExtraExtracted]
@@ -87,13 +86,9 @@ object RemoteExtractor {
 
 object RouteParamsExtractor {
 
-  val empty: RouteParamsExtractor[HNil] = apply(_ ⇒ HNil)
+  val empty = Extractor.empty[RouteParams]
 
   def apply[T](implicit rpe: RouteParamsExtractor[T]): RouteParamsExtractor[T] = rpe
-
-  def apply[T](f: RouteParams ⇒ T): RouteParamsExtractor[T] = f map pure
-
-  implicit def fromFunction[T](f: RouteParams ⇒ ExtractResult[T]): RouteParamsExtractor[T] = Kleisli(f)
 
   //todo: this extract from either path or query without a way to specify one way or another.
   object kvToKlesili extends Poly1 {

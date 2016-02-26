@@ -1,7 +1,7 @@
 package asobu.dsl.extractors
 
 import cats.data.Kleisli
-import asobu.dsl.{ExtractResult, Extractor}
+import asobu.dsl.{ExtractResult, RequestExtractor}
 import ExtractResult._
 import cats.sequence.RecordSequencer
 import play.api.mvc.RequestHeader
@@ -13,10 +13,10 @@ import asobu.dsl.CatsInstances._
 
 class AuthInfoExtractorBuilder[AuthInfoT](buildAuthInfo: RequestHeader ⇒ Future[Either[String, AuthInfoT]]) {
 
-  def apply[Repr <: HList](toRecord: AuthInfoT ⇒ Repr): Extractor[Repr] =
+  def apply[Repr <: HList](toRecord: AuthInfoT ⇒ Repr): RequestExtractor[Repr] =
     apply().map(toRecord)
 
-  def apply(): Extractor[AuthInfoT] = Kleisli(
+  def apply(): RequestExtractor[AuthInfoT] = Kleisli(
     buildAuthInfo.andThen(_.map(_.left.map(Unauthorized(_)))).andThen(fromEither)
   )
 
@@ -25,7 +25,7 @@ class AuthInfoExtractorBuilder[AuthInfoT](buildAuthInfo: RequestHeader ⇒ Futur
     gen: LabelledGeneric.Aux[AuthInfoT, Repr],
     select: Selector[Repr, K]
 
-  ): Extractor[select.Out] =
+  ): RequestExtractor[select.Out] =
     apply().map { ai ⇒
       gen.to(ai)(key)
     }
@@ -34,7 +34,7 @@ class AuthInfoExtractorBuilder[AuthInfoT](buildAuthInfo: RequestHeader ⇒ Futur
     def applyRecord[Repr <: HList, Out <: HList](repr: Repr)(
       implicit
       seq: RecordSequencer.Aux[Repr, AuthInfoT ⇒ Out]
-    ): Extractor[Out] = {
+    ): RequestExtractor[Out] = {
       apply(seq(repr))
     }
   }

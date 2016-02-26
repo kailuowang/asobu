@@ -1,6 +1,6 @@
 package asobu.dsl.extractors
 
-import asobu.dsl.{ExtractResult, Extractor}
+import asobu.dsl.{Extractor, ExtractResult, RequestExtractor}
 import cats.data.Xor
 import org.specs2.concurrent.ExecutionEnv
 import play.api.mvc.RequestHeader

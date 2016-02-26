@@ -14,14 +14,19 @@ import CatsInstances._
 import cats.sequence._
 
 object Extractor extends ExtractorBuilderSyntax {
-  val empty: Extractor[HNil] = apply(_ ⇒ HNil)
+  def empty[TFrom]: Extractor[TFrom, HNil] = apply(_ ⇒ HNil)
 
-  def apply[T](f: Request[AnyContent] ⇒ T): Extractor[T] = f map pure
+  def apply[TFrom, T](f: TFrom ⇒ T): Extractor[TFrom, T] = f map pure
 
-  implicit def fromFunction[T](f: Request[AnyContent] ⇒ ExtractResult[T]): Extractor[T] = Kleisli(f)
+  implicit def fromFunction[TFrom, T](f: TFrom ⇒ ExtractResult[T]): Extractor[TFrom, T] = Kleisli(f)
 
-  implicit def fromFunctionXorT[T](f: Request[AnyContent] ⇒ XorTF[T]): Extractor[T] = f.andThen(ExtractResult(_))
+  implicit def fromFunctionXorT[TFrom, T](f: TFrom ⇒ XorTF[T]): Extractor[TFrom, T] = f.andThen(ExtractResult(_))
 
+}
+
+object RequestExtractor {
+  val empty = Extractor.empty[Request[AnyContent]]
+  def apply[T](f: Request[AnyContent] ⇒ T): RequestExtractor[T] = Extractor(f)
 }
 
 trait ExtractorBuilderSyntax {
@@ -31,10 +36,10 @@ trait ExtractorBuilderSyntax {
    * e.g. from(a = (_:Request[AnyContent]).headers("aKay"))
    */
   object from extends shapeless.RecordArgs {
-    def applyRecord[Repr <: HList, Out <: HList](repr: Repr)(
+    def applyRecord[TFrom, Repr <: HList, Out <: HList](repr: Repr)(
       implicit
-      seq: RecordSequencer.Aux[Repr, Request[AnyContent] ⇒ Out]
-    ): Extractor[Out] = {
+      seq: RecordSequencer.Aux[Repr, TFrom ⇒ Out]
+    ): Extractor[TFrom, Out] = {
       Extractor(seq(repr))
     }
   }
@@ -46,10 +51,10 @@ trait ExtractorBuilderSyntax {
    * compose(a = header("aKey"))  //header is method that constructor a more robust Extractor
    */
   object compose extends shapeless.RecordArgs {
-    def applyRecord[Repr <: HList, Out <: HList](repr: Repr)(
+    def applyRecord[TFrom, Repr <: HList, Out <: HList](repr: Repr)(
       implicit
-      seq: RecordSequencer.Aux[Repr, Extractor[Out]]
-    ): Extractor[Out] = {
+      seq: RecordSequencer.Aux[Repr, Extractor[TFrom, Out]]
+    ): Extractor[TFrom, Out] = {
       seq(repr)
     }
   }
@@ -64,11 +69,11 @@ object DefaultExtractorImplicits extends DefaultExtractorImplicits
 trait ExtractorOps {
   import Extractor._
 
-  implicit class extractorOps[Repr <: HList](self: Extractor[Repr]) {
-    def and[ThatR <: HList, ResultR <: HList](that: Extractor[ThatR])(
+  implicit class extractorOps[TFrom, Repr <: HList](self: Extractor[TFrom, Repr]) {
+    def and[ThatR <: HList, ResultR <: HList](that: Extractor[TFrom, ThatR])(
       implicit
       prepend: Prepend.Aux[Repr, ThatR, ResultR]
-    ): Extractor[ResultR] = { (req: Request[AnyContent]) ⇒
+    ): Extractor[TFrom, ResultR] = { (req: TFrom) ⇒
 
       for {
         eitherRepr ← self.run(req)

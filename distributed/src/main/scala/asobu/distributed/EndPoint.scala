@@ -5,7 +5,7 @@ import java.io.File
 import akka.actor.{ActorSelection, ActorRef}
 import akka.util.Timeout
 import asobu.distributed.Action.DistributedRequest
-import asobu.dsl.{ExtractResult, Extractor}
+import asobu.dsl.{ExtractResult, RequestExtractor}
 import play.api.mvc._, Results._
 import play.core.routing
 import play.core.routing.Route.ParamsExtractor

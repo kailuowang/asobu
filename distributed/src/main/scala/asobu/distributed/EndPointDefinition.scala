@@ -1,7 +1,7 @@
 package asobu.distributed
 
 import akka.actor.ActorSelection
-import asobu.dsl.{Extractor, ExtractResult}
+import asobu.dsl.{RequestExtractor, ExtractResult}
 import asobu.dsl.util.HListOps.CombineTo
 import play.api.mvc.{AnyContent, Request}
 import play.core.routing.RouteParams
