@@ -35,6 +35,6 @@ case class EndPointDefImpl(
     remoteActor: ActorSelection
 ) extends EndpointDefinition {
 
-  type T = remoteExtractor.T
+  type T = remoteExtractor.L
   def extract(routeParams: RouteParams, request: Request[AnyContent]): ExtractResult[T] = remoteExtractor(routeParams, request)
 }

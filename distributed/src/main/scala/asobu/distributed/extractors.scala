@@ -24,7 +24,7 @@ trait Extractors[TMessage] {
 
   val remoteExtractor: RemoteExtractor
 
-  type LExtracted = remoteExtractor.T
+  type LExtracted = remoteExtractor.L
 
   def localExtract(dr: DistributedRequest[LExtracted]): ExtractResult[TMessage]
 }
@@ -35,7 +35,7 @@ object Extractors {
 
   type BodyExtractor[T] = Extractor[AnyContent, T]
 
-  class builder[TMessage](remoteActor0: ActorSelection) {
+  class builder[TMessage] {
     def apply[LExtracted <: HList, LParamExtracted <: HList, LExtraExtracted <: HList, LBody <: HList, TRepr <: HList](
       remoteRequestExtractor: RequestExtractor[LExtraExtracted],
       bodyExtractor: BodyExtractor[LBody]
@@ -47,7 +47,10 @@ object Extractors {
       routeParamsExtractor: RouteParamsExtractor[LParamExtracted]): Extractors[TMessage] = new Extractors[TMessage] {
       val remoteExtractor = RemoteExtractor(routeParamsExtractor, remoteRequestExtractor)
 
-      def localExtract(dr: DistributedRequest[LExtracted]): ExtractResult[TMessage] = ???
+      def localExtract(dr: DistributedRequest[LExtracted]): ExtractResult[TMessage] = bodyExtractor.run(dr.body).map { body ⇒
+        val repr = combineTo(dr.extracted, body)
+        gen.from(repr)
+      }
     }
   }
 }
@@ -56,26 +59,27 @@ object Extractors {
  * Extract information at the gateway end
  */
 trait RemoteExtractor {
-  type T
-  def apply(routeParams: RouteParams, request: Request[AnyContent]): ExtractResult[T]
+  type L <: HList
+  def apply(routeParams: RouteParams, request: Request[AnyContent]): ExtractResult[L]
 }
 
 object RemoteExtractor {
+  type Aux[L0] = RemoteExtractor { type L = L0 }
 
   def empty = new RemoteExtractor {
-    type T = HNil
+    type L = HNil
     def apply(routeParams: RouteParams, request: Request[AnyContent]): ExtractResult[HNil] = ExtractResult.pure(HNil)
-
   }
-  def apply[ParamsRepr <: HList, LExtraExtracted <: HList](
+
+  def apply[ParamsRepr <: HList, LExtraExtracted <: HList, LOut <: HList](
     paramsExtractor: RouteParamsExtractor[ParamsRepr],
     requestExtractor: RequestExtractor[LExtraExtracted]
   )(
     implicit
-    prepend: Prepend[ParamsRepr, LExtraExtracted]
-  ): RemoteExtractor = new RemoteExtractor {
-    type T = prepend.Out
-    def apply(routeParams: RouteParams, request: Request[AnyContent]): ExtractResult[T] =
+    prepend: Prepend.Aux[ParamsRepr, LExtraExtracted, LOut]
+  ): Aux[LOut] = new RemoteExtractor {
+    type L = LOut
+    def apply(routeParams: RouteParams, request: Request[AnyContent]): ExtractResult[L] =
       for {
         paramsRepr ← paramsExtractor.run(routeParams)
         requestRepr ← requestExtractor.run(request)
