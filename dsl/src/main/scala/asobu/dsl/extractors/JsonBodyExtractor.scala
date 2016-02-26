@@ -32,5 +32,6 @@ object JsonBodyExtractor {
       case None ⇒
         left[T](BadRequest("Invalid JSON body."))
     }
+
 }
 

@@ -1,6 +1,7 @@
 package asobu.distributed
 
-import akka.actor.ActorSelection
+import akka.actor.{ActorRef, ActorSelection}
+import asobu.distributed.Extractors.RemoteExtractor
 import asobu.dsl.{RequestExtractor, ExtractResult}
 import asobu.dsl.util.HListOps.CombineTo
 import play.api.mvc.{AnyContent, Request}
@@ -21,20 +22,37 @@ trait EndpointDefinition {
   val routeInfo: Route
   val prefix: String
   def extract(routeParams: RouteParams, request: Request[AnyContent]): ExtractResult[T]
-  def remoteActor: ActorSelection
+  def handlerActor: ActorRef
 }
 
 object EndpointDefinition {
   type Aux[T0] = EndpointDefinition { type T = T0 }
 }
 
-case class EndPointDefImpl(
+case class EndPointDefImpl[LExtracted <: HList](
     prefix: String,
     routeInfo: Route,
-    remoteExtractor: RemoteExtractor,
-    remoteActor: ActorSelection
+    remoteExtractor: RemoteExtractor[LExtracted],
+    handlerActor: ActorRef
 ) extends EndpointDefinition {
 
-  type T = remoteExtractor.L
-  def extract(routeParams: RouteParams, request: Request[AnyContent]): ExtractResult[T] = remoteExtractor(routeParams, request)
+  type T = LExtracted
+  def extract(routeParams: RouteParams, request: Request[AnyContent]): ExtractResult[LExtracted] = remoteExtractor.run((routeParams, request))
+}
+
+/**
+ * Endpoint that takes no input at all, just match a route path
+ *
+ * @param prefix
+ * @param routeInfo
+ * @param remoteActor
+ */
+case class NullaryEndPointDefinition(
+    prefix: String,
+    routeInfo: Route,
+    handlerActor: ActorRef
+) extends EndpointDefinition {
+
+  type T = HNil
+  def extract(routeParams: RouteParams, request: Request[AnyContent]): ExtractResult[T] = ExtractResult.pure(HNil)
 }

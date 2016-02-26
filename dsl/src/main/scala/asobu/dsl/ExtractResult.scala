@@ -1,10 +1,11 @@
 package asobu.dsl
 
 import asobu.dsl.ExtractResult._
-import cats.{FlatMap, Monad}
+import cats.{Monoid, FlatMap, Monad}
 import cats.data.{Xor, XorT}
 import cats.syntax.all._
 import play.api.mvc.{AnyContent, Request, Result}
+import shapeless.{HList, HNil}
 import scala.annotation.implicitNotFound
 import scala.concurrent.Future
 import scala.util.Try

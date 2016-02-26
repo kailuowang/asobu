@@ -1,7 +1,8 @@
 package asobu.distributed
 
-import akka.actor.{ActorSelection, Actor}
+import akka.actor._
 import asobu.distributed.Action.{DistributedRequest, UnrecognizedMessage}
+import asobu.distributed.Extractors.BodyExtractor
 import asobu.dsl.util.HListOps.{RestOf2, RestOf}
 import asobu.dsl.util.RecordOps.FieldKVs
 import asobu.dsl.{ExtractResult, RequestExtractor}
@@ -14,17 +15,19 @@ import shapeless.ops.hlist.Prepend
 import scala.concurrent.Future
 
 trait Action[TMessage] {
+  def actorRefFactory: ActorRefFactory
 
   val messageExtractors: Extractors[TMessage]
 
   type ExtractedRemotely = messageExtractors.LExtracted
 
-  def remoteActor: ActorSelection
+  /**
+   * actor that handles
+   */
+  lazy val handlerActor: ActorRef = actorRefFactory.actorOf(Props(new RemoteHandler).withDeploy(Deploy.local))
 
   def endpointDefinition(prefix: String, route: Route): EndpointDefinition =
-    EndPointDefImpl(prefix, route, messageExtractors.remoteExtractor, remoteActor)
-
-  def constructMessage(dr: DistributedRequest[ExtractedRemotely]): ExtractResult[TMessage]
+    EndPointDefImpl(prefix, route, messageExtractors.remoteExtractor, handlerActor)
 
   class RemoteHandler extends Actor {
     import context.dispatcher
@@ -43,7 +46,7 @@ trait Action[TMessage] {
 
   }
 
-  def backend(t: TMessage): Future[Result]
+  def backend(t: TMessage): Future[Result] = ???
 
 }
 
@@ -51,6 +54,11 @@ object Action {
   case object UnrecognizedMessage
 
   case class DistributedRequest[ExtractedT](extracted: ExtractedT, body: AnyContent)
+
+  def apply[TMessage](extractors: Extractors[TMessage])(implicit arf: ActorRefFactory): Action[TMessage] = new Action[TMessage] {
+    def actorRefFactory = arf
+    val messageExtractors = extractors
+  }
 
 }
 

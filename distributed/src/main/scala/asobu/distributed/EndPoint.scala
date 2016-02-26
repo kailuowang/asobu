@@ -46,7 +46,7 @@ case class Endpoint(definition: EndpointDefinition) extends EndpointRoute with E
 
     def handleMessageWithBackend(t: T): Future[Result] = {
       implicit val ak: Timeout = 10.minutes //todo: find the right place to configure this
-      (remoteActor ? DistributedRequest(t, request.body)).collect {
+      (handlerActor ? DistributedRequest(t, request.body)).collect {
         case r: Result ⇒ r
         case m         ⇒ InternalServerError(s"Unsupported result from backend ${m.getClass}")
       }
@@ -90,7 +90,7 @@ object Endpoint {
     lazy val unsupportedError = Seq(RoutesCompilationError(placeholderFile, "doesn't support anything but route", None, None))
 
     def findEndPointDef(route: Route): EndpointDefinition = {
-      EndPointDefImpl(prefix, route, RemoteExtractor.empty, null) //todo replace this with real implementation
+      NullaryEndPointDefinition(prefix, route, null) //todo replace this with real implementation
     }
 
     RoutesFileParser.parseContent(content, placeholderFile).right.flatMap { routes ⇒
