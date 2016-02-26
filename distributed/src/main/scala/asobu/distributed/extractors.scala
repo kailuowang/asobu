@@ -69,6 +69,9 @@ object Extractors {
 object BodyExtractor {
   val empty = Extractor.empty[AnyContent]
   def json[T: Reads]: BodyExtractor[T] = Extractor.fromFunction(JsonBodyExtractor.extractBody[T])
+  def jsonList[T: Reads](implicit lgen: LabelledGeneric[T]): BodyExtractor[lgen.Repr] =
+    json[T] map (lgen.to(_))
+
 }
 
 object RemoteExtractor {

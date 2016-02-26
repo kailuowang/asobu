@@ -46,7 +46,7 @@ trait ExtractorBuilderSyntax {
 
   /**
    * extractor composed of several extractors
-   * e.g. compose(a = Extractor(_.headers("aKey"))
+   * e.g. compose(a = RequestExtractor(_.headers("aKey"))
    * or
    * compose(a = header("aKey"))  //header is method that constructor a more robust Extractor
    */
