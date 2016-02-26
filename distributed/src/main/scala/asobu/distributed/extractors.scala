@@ -54,7 +54,7 @@ object Extractors {
 
       type LExtracted = LExtracted0
 
-      val remoteExtractor = RemoteExtractor(routeParamsExtractor, remoteRequestExtractor)
+      val remoteExtractor = Extractor.combine(routeParamsExtractor, remoteRequestExtractor)
 
       def localExtract(dr: DistributedRequest[LExtracted]): ExtractResult[TMessage] = bodyExtractor.run(dr.body).map { body ⇒
         val repr = combineTo(dr.extracted, body)
@@ -72,23 +72,7 @@ object BodyExtractor {
 }
 
 object RemoteExtractor {
-
-  def empty = Extractor.empty[(RouteParams, Request[AnyContent])]
-
-  def apply[ParamsRepr <: HList, LExtraExtracted <: HList, LOut <: HList](
-    paramsExtractor: RouteParamsExtractor[ParamsRepr],
-    requestExtractor: RequestExtractor[LExtraExtracted]
-  )(
-    implicit
-    prepend: Prepend.Aux[ParamsRepr, LExtraExtracted, LOut]
-  ): RemoteExtractor[LOut] = Extractor.fromFunction { (p: (RouteParams, Request[AnyContent])) ⇒
-    val (routeParams, request) = p
-    for {
-      paramsRepr ← paramsExtractor.run(routeParams)
-      requestRepr ← requestExtractor.run(request)
-    } yield paramsRepr ++ requestRepr
-  }
-
+  val empty = Extractor.empty[(RouteParams, Request[AnyContent])]
 }
 
 object RouteParamsExtractor {

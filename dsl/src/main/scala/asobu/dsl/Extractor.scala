@@ -58,6 +58,24 @@ trait ExtractorBuilderSyntax {
       seq(repr)
     }
   }
+
+  /**
+   * combine two extractors into one that takes two inputs as a tuple and returns a concated list of the two results
+   * @return
+   */
+  def combine[FromA, FromB, LA <: HList, LB <: HList, LOut <: HList](
+    ea: Extractor[FromA, LA],
+    eb: Extractor[FromB, LB]
+  )(
+    implicit
+    prepend: Prepend.Aux[LA, LB, LOut]
+  ): Extractor[(FromA, FromB), LOut] = Extractor.fromFunction { (p: (FromA, FromB)) ⇒
+    val (a, b) = p
+    for {
+      ra ← ea.run(a)
+      rb ← eb.run(b)
+    } yield ra ++ rb
+  }
 }
 
 trait DefaultExtractorImplicits {
