@@ -21,6 +21,8 @@ import CatsInstances._
 import cats.sequence._
 import play.api.mvc._, play.api.mvc.Results._
 
+import scala.annotation.implicitNotFound
+
 trait Extractors[TMessage] {
   type LExtracted <: HList
 
@@ -47,14 +49,14 @@ object Extractors {
       bodyExtractor: BodyExtractor[LBody]
     )(implicit
       gen: LabelledGeneric.Aux[TMessage, TRepr],
-      prepend: Prepend.Aux[LParamExtracted, LExtraExtracted, LExtracted0],
       r: RestOf2.Aux[TRepr, LExtraExtracted, LBody, LParamExtracted],
+      prepend: Prepend.Aux[LParamExtracted, LExtraExtracted, LExtracted0],
       combineTo: CombineTo[LExtracted0, LBody, TRepr],
-      routeParamsExtractor: RouteParamsExtractor[LParamExtracted]): Aux[TMessage, LExtracted0] = new Extractors[TMessage] {
+      rpeb: RouteParamsExtractorBuilder[LParamExtracted]): Aux[TMessage, LExtracted0] = new Extractors[TMessage] {
 
       type LExtracted = LExtracted0
 
-      val remoteExtractor = Extractor.combine(routeParamsExtractor, remoteRequestExtractor)
+      val remoteExtractor = Extractor.combine(rpeb(), remoteRequestExtractor)
 
       def localExtract(dr: DistributedRequest[LExtracted]): ExtractResult[TMessage] = bodyExtractor.run(dr.body).map { body ⇒
         val repr = combineTo(dr.extracted, body)
@@ -79,10 +81,13 @@ object RemoteExtractor {
 }
 
 object RouteParamsExtractor {
+  def apply[L <: HList](implicit builder: RouteParamsExtractorBuilder[L]): RouteParamsExtractor[L] = builder()
+}
 
-  val empty = Extractor.empty[RouteParams]
+@implicitNotFound("Cannot construct RouteParamsExtractor out of ${L}")
+trait RouteParamsExtractorBuilder[L <: HList] extends (() ⇒ RouteParamsExtractor[L])
 
-  def apply[T](implicit rpe: RouteParamsExtractor[T]): RouteParamsExtractor[T] = rpe
+trait MkRouteParamsExtractorBuilder0 {
 
   //todo: this extract from either path or query without a way to specify one way or another.
   object kvToKlesili extends Poly1 {
@@ -105,7 +110,15 @@ object RouteParamsExtractor {
     ks: FieldKVs.Aux[Repr, KVs],
     mapper: Mapper.Aux[kvToKlesili.type, KVs, KleisliRepr],
     sequence: RecordSequencer.Aux[KleisliRepr, Kleisli[ExtractResult, RouteParams, Repr]]
-  ): RouteParamsExtractor[Repr] = {
-    sequence(ks().map(kvToKlesili))
+  ): RouteParamsExtractorBuilder[Repr] = new RouteParamsExtractorBuilder[Repr] {
+    def apply(): RouteParamsExtractor[Repr] = sequence(ks().map(kvToKlesili))
+  }
+}
+
+object RouteParamsExtractorBuilder extends MkRouteParamsExtractorBuilder0 {
+
+  def apply[T <: HList](implicit rpe: RouteParamsExtractorBuilder[T]): RouteParamsExtractorBuilder[T] = rpe
+  implicit val empty: RouteParamsExtractorBuilder[HNil] = new RouteParamsExtractorBuilder[HNil] {
+    def apply() = Extractor.empty[RouteParams]
   }
 }
