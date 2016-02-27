@@ -1,16 +1,10 @@
 package asobu.distributed
 
-import asobu.dsl.ExtractResult
-import asobu.dsl.util.RecordOps.FieldKVs
-import cats.sequence.Traverser
 import org.specs2.concurrent.ExecutionEnv
 import org.specs2.mutable.Specification
-import play.api.libs.json.Json
-import play.api.mvc.Results._
 import play.core.routing.RouteParams
-import shapeless.{HNil, Witness}
+import shapeless._
 import shapeless.record._
-import RouteParamsExtractorBuilder._
 import asobu.dsl.CatsInstances._
 
 class RouteParamsExtractorSpec extends Specification {
