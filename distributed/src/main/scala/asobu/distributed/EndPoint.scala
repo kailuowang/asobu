@@ -19,14 +19,12 @@ import akka.pattern.ask
 import cats.std.future._
 
 trait EndpointRoute {
-  def unapply(requestHeader: RequestHeader): Option[RouteParams]
+  def unapply(requestHeader: Request[AnyContent]): Option[RouteParams]
 }
 
 trait EndpointHandler {
   def handle(routeParams: RouteParams, request: Request[AnyContent]): Future[Result]
 }
-
-object EmptyEnd
 
 case class Endpoint(definition: EndpointDefinition) extends EndpointRoute with EndpointHandler {
   import ExecutionContext.Implicits.global
@@ -37,10 +35,10 @@ case class Endpoint(definition: EndpointDefinition) extends EndpointRoute with E
   import definition._, definition.routeInfo._
 
   lazy val defaultPrefix: String = {
-    if (prefix.endsWith("/")) "" else "/"
+    if (prefix.value.endsWith("/")) "" else "/"
   }
 
-  def unapply(requestHeader: RequestHeader): Option[RouteParams] = routeExtractors.unapply(requestHeader)
+  def unapply(request: Request[AnyContent]): Option[RouteParams] = routeExtractors.unapply(request)
 
   def handle(routeParams: RouteParams, request: Request[AnyContent]): Future[Result] = {
 
@@ -69,7 +67,7 @@ case class Endpoint(definition: EndpointDefinition) extends EndpointRoute with E
 
   private lazy val routeExtractors: ParamsExtractor = {
     val localParts = if (path.parts.nonEmpty) StaticPart(defaultPrefix) +: path.parts else Nil
-    routing.Route(verb.value, routing.PathPattern(toCPart(StaticPart(prefix) +: localParts)))
+    routing.Route(verb.value, routing.PathPattern(toCPart(StaticPart(prefix.value) +: localParts)))
   }
 
   implicit private def toCPart(parts: Seq[PathPart]): Seq[routing.PathPart] = parts map {
@@ -80,25 +78,6 @@ case class Endpoint(definition: EndpointDefinition) extends EndpointRoute with E
 }
 
 object Endpoint {
-
-  def parse(content: String, prefix: String): Either[Seq[RoutesCompilationError], List[EndpointDefinition]] = {
-    import cats.std.list._
-    import cats.std.either._
-    import cats.syntax.traverse._
-
-    val placeholderFile = new File("remote-routes") //to conform to play api
-    lazy val unsupportedError = Seq(RoutesCompilationError(placeholderFile, "doesn't support anything but route", None, None))
-
-    def findEndPointDef(route: Route): EndpointDefinition = {
-      NullaryEndPointDefinition(prefix, route, null) //todo replace this with real implementation
-    }
-
-    RoutesFileParser.parseContent(content, placeholderFile).right.flatMap { routes ⇒
-      routes.traverse[Either[Seq[RoutesCompilationError], ?], EndpointDefinition] {
-        case r: Route ⇒ Right(findEndPointDef(r))
-        case _        ⇒ Left(unsupportedError)
-      }
-    }
-  }
+  case class Prefix(value: String) extends AnyVal
 
 }

@@ -33,7 +33,6 @@ object RegistryClient {
     Cluster(system).registerOnMemberUp {
       val registry = system.actorOf(FromConfig.props(), name = "endpointsRegistryRouter")
       val client = system.actorOf(Props(new RegistryClient(registry)))
-      system.scheduler.scheduleOnce(4.second, client, Test)
     }
   }
 }

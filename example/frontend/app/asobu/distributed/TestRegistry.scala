@@ -1,0 +1,78 @@
+package asobu.distributed
+
+import javax.inject.{Inject, Provider, Singleton}
+
+import akka.actor._
+import akka.cluster.Cluster
+import asobu.distributed.EndpointRegistry.Add
+import asobu.dsl.{RequestExtractor, Directive}
+import cats.data.Xor
+import play.api.{Configuration, Environment}
+import play.api.inject.Module
+import play.api.mvc.{Result, Headers, AnyContent, Request}
+import shapeless.HList
+
+import scala.concurrent.{Future, Await, Promise}
+import scala.concurrent.duration._
+
+
+
+class TestEndpointRegistry extends Actor with ActorLogging {
+
+  import context.dispatcher
+
+  def receive: Receive = running(Nil)
+
+
+  def running(endpoints: List[Endpoint]): Receive = {
+    ({
+      case Add(defs) ⇒
+        context become running(endpoints ++ defs.map(Endpoint(_)))
+
+    } : Receive) orElse receiveBy(endpoints)
+  }
+
+
+  private def receiveBy(endpoints: List[Endpoint]): Receive = {
+    def toPartial(endpoint: Endpoint): Receive = {
+      case req @ endpoint(rp) => endpoint.handle(rp, req)
+    }
+    endpoints.map(toPartial).reduce(_ orElse _)
+  }
+
+
+}
+
+
+case class MockRequest(path: String, headers: Headers = Headers()) extends Request[AnyContent] {
+  def body: AnyContent = ???
+  def secure: Boolean = ???
+  def uri: String = ???
+  def remoteAddress: String = ???
+  def queryString: Map[String, Seq[String]] = ???
+  def method: String = ???
+  def version: String = ???
+  def tags: Map[String, String] = ???
+  def id: Long = ???
+}
+
+
+@Singleton
+class TestEndpointRegistryProvider @Inject()(system: ActorSystem) extends Provider[ActorRef] {
+  val promise = Promise[ActorRef]
+  Cluster(system) registerOnMemberUp {
+    promise.success(system.actorOf(Props[TestEndpointRegistry], name = "endpoint-registry"))
+  }
+
+  def get(): ActorRef = Await.result(promise.future, 30.seconds) //intentionally blocking on cluster startup
+}
+
+class TestEndpointRegistryModule extends Module {
+
+  def bindings(
+                environment: Environment,
+                configuration: Configuration
+              ) = Seq(
+    bind[TestEndpointRegistryProvider].toSelf.eagerly
+  )
+}

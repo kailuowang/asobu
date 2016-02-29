@@ -1,6 +1,7 @@
 package asobu.distributed
 
 import akka.actor.{ActorRef, ActorSelection}
+import asobu.distributed.Endpoint.Prefix
 import asobu.distributed.Extractors.RemoteExtractor
 import asobu.dsl.{RequestExtractor, ExtractResult}
 import asobu.dsl.util.HListOps.CombineTo
@@ -20,7 +21,7 @@ trait EndpointDefinition {
    */
   type T
   val routeInfo: Route
-  val prefix: String
+  val prefix: Prefix
   def extract(routeParams: RouteParams, request: Request[AnyContent]): ExtractResult[T]
   def handlerActor: ActorRef
 }
@@ -30,7 +31,7 @@ object EndpointDefinition {
 }
 
 case class EndPointDefImpl[LExtracted <: HList](
-    prefix: String,
+    prefix: Prefix,
     routeInfo: Route,
     remoteExtractor: RemoteExtractor[LExtracted],
     handlerActor: ActorRef
@@ -47,8 +48,8 @@ case class EndPointDefImpl[LExtracted <: HList](
  * @param routeInfo
  * @param remoteActor
  */
-case class NullaryEndPointDefinition(
-    prefix: String,
+case class NullaryEndpointDefinition(
+    prefix: Prefix,
     routeInfo: Route,
     handlerActor: ActorRef
 ) extends EndpointDefinition {

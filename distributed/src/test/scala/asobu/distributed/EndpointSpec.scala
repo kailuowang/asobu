@@ -1,5 +1,6 @@
 package asobu.distributed
 
+import asobu.distributed.Endpoint.Prefix
 import play.api.mvc.RequestHeader
 import play.api.test.{FakeRequest, PlaySpecification}
 import play.core.routing.RouteParams
@@ -20,7 +21,10 @@ object EndpointSpec extends PlaySpecification {
       |
     """.stripMargin
 
-  lazy val parserResult = Endpoint.parse(routeString, "/")
+  val createEndpointDef = (route: Route, prefix: Prefix) ⇒ {
+    NullaryEndpointDefinition(prefix, route, null): EndpointDefinition
+  }
+  lazy val parserResult = EndpointParser.parse(Prefix("/"), routeString, createEndpointDef)
   lazy val endPoints = parserResult.right.get
   lazy val ep1: EndpointDefinition = endPoints(0)
   lazy val ep2: EndpointDefinition = endPoints(1)

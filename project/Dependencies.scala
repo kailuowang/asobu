@@ -23,7 +23,7 @@ object Dependencies {
   )
 
   val typelevel = Seq(
-    "com.milessabin" %% "kittens" % "1.0.0-SNAPSHOT"
+    "com.milessabin" %% "kittens" % "1.0.0-M1"
   )
 
 

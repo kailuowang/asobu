@@ -1,6 +1,5 @@
 package asobu.distributed
 
-import _root_.akka.actor.ActorSelection
 import asobu.distributed.Action.DistributedRequest
 import asobu.distributed.Extractors.{RemoteExtractor, BodyExtractor, RouteParamsExtractor}
 import asobu.dsl._
@@ -18,7 +17,6 @@ import shapeless._, labelled.field
 import ExtractResult._
 import cats.syntax.all._
 import CatsInstances._
-import cats.sequence._
 import play.api.mvc._, play.api.mvc.Results._
 
 import scala.annotation.implicitNotFound

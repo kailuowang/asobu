@@ -1,8 +1,9 @@
 package backend
 
 import akka.actor._
-import asobu.distributed.{EndpointRegistry, EndpointRegistryProvider}
-import backend.endpoints.RegistryClient
+import akka.cluster.Cluster
+import akka.routing.FromConfig
+import backend.endpoints.{TestMeEndpoint, RegistryClient}
 import com.typesafe.config.ConfigFactory
 import backend.factorial._
 import scala.collection.JavaConversions._
@@ -26,14 +27,21 @@ object Backend extends App {
       "akka.remote.netty.tcp.port" -> port
   )
   
-  val system = ActorSystem("application", (ConfigFactory parseMap properties)
+  implicit val system: ActorSystem = ActorSystem("application", (ConfigFactory parseMap properties)
     .withFallback(ConfigFactory.load())
   )
 
-  RegistryClient startOn system
+
   // Deploy actors and services
   FactorialBackend startOn system
 
+  Cluster(system).registerOnMemberUp {
+    val registry = system.actorOf(FromConfig.props(), name = "endpointsRegistryRouter")
 
-  Await.result(system.whenTerminated, Duration.Inf)
+    TestMeEndpoint.endpointDefs.foreach { ed =>
+      registry !
+    }
+
+  }
+
 }
