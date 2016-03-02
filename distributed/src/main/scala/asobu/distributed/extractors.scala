@@ -5,10 +5,11 @@ import asobu.distributed.Extractors.{RemoteExtractor, BodyExtractor, RouteParams
 import asobu.dsl._
 import asobu.dsl.extractors.JsonBodyExtractor
 import asobu.dsl.util.HListOps.{CombineTo, RestOf2}
+import cats.Eval
 import cats.sequence.RecordSequencer
 import shapeless.ops.hlist.Prepend
 import asobu.dsl.util.RecordOps.{FieldKV, FieldKVs}
-import cats.data.Kleisli
+import cats.data.{Xor, Kleisli}
 import play.api.libs.json.{Reads, Json}
 import play.core.routing.RouteParams
 import shapeless.labelled.FieldType
@@ -16,7 +17,7 @@ import shapeless.ops.hlist.Mapper
 import shapeless._, labelled.field
 import ExtractResult._
 import cats.syntax.all._
-import CatsInstances._
+import SerializableCatsInstances._
 import play.api.mvc._, play.api.mvc.Results._
 
 import scala.annotation.implicitNotFound
@@ -89,16 +90,16 @@ trait MkRouteParamsExtractorBuilder0 {
 
   //todo: this extract from either path or query without a way to specify one way or another.
   object kvToKlesili extends Poly1 {
-    implicit def caseKV[K <: Symbol, V: PathBindable: QueryStringBindable](
+    implicit def caseKV[K <: Symbol, V: RouteParamExtractor](
       implicit
       w: Witness.Aux[K]
     ): Case.Aux[FieldKV[K, V], FieldType[K, Kleisli[ExtractResult, RouteParams, V]]] =
       at[FieldKV[K, V]] { kv ⇒
         field[K](Kleisli { (params: RouteParams) ⇒
           val field: String = w.value.name
-          val xor = params.fromPath[V](field).value.toXor orElse params.fromQuery[V](field).value.toXor
-
-          fromXor(xor.leftMap(m ⇒ BadRequest(Json.obj("error" → s"missing field $field $m"))))
+          val pe = RouteParamExtractor[V]
+          val extracted = pe(field, params)
+          fromXor(extracted.leftMap(m ⇒ BadRequest(Json.obj("error" → s"missing field $field $m"))))
         })
       }
   }
@@ -120,5 +121,32 @@ object RouteParamsExtractorBuilder extends MkRouteParamsExtractorBuilder0 {
 
   implicit val empty: RouteParamsExtractorBuilder[HNil] = new RouteParamsExtractorBuilder[HNil] {
     def apply() = Extractor.empty[RouteParams]
+  }
+}
+
+trait RouteParamExtractor[V] extends Serializable {
+  def apply(field: String, params: RouteParams): Xor[String, V]
+}
+
+//This whole thing is needed because PathBindable and QueryStringBindable isn't serializable
+object RouteParamExtractor {
+
+  def apply[V](implicit rpe: RouteParamExtractor[V]) = rpe
+
+  def mk[V](f: ⇒ (String, RouteParams) ⇒ Xor[String, V]) = new RouteParamExtractor[V] {
+    def apply(field: String, params: RouteParams): Xor[String, V] = {
+      f(field, params)
+    }
+  }
+
+  implicit val rpeInt: RouteParamExtractor[Int] = mk(ext[Int])
+  implicit val rpeLong: RouteParamExtractor[Long] = mk(ext[Long])
+  implicit val rpeDouble: RouteParamExtractor[Double] = mk(ext[Double])
+  implicit val rpeFloat: RouteParamExtractor[Float] = mk(ext[Float])
+  implicit val rpeBoolean: RouteParamExtractor[Boolean] = mk(ext[Boolean])
+  implicit val rpeString: RouteParamExtractor[String] = mk(ext[String])
+
+  def ext[V: PathBindable: QueryStringBindable] = (field: String, params: RouteParams) ⇒ {
+    params.fromPath[V](field).value.toXor orElse params.fromQuery[V](field).value.toXor
   }
 }

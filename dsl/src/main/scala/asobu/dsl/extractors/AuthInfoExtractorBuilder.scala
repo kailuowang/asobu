@@ -14,9 +14,9 @@ import asobu.dsl.CatsInstances._
 class AuthInfoExtractorBuilder[AuthInfoT](buildAuthInfo: RequestHeader ⇒ Future[Either[String, AuthInfoT]]) {
 
   def apply[Repr <: HList](toRecord: AuthInfoT ⇒ Repr): RequestExtractor[Repr] =
-    apply().map(toRecord)
+    apply.map(toRecord)
 
-  def apply(): RequestExtractor[AuthInfoT] = Kleisli(
+  def apply: RequestExtractor[AuthInfoT] = Kleisli(
     buildAuthInfo.andThen(_.map(_.left.map(Unauthorized(_)))).andThen(fromEither)
   )
 
@@ -26,7 +26,7 @@ class AuthInfoExtractorBuilder[AuthInfoT](buildAuthInfo: RequestHeader ⇒ Futur
     select: Selector[Repr, K]
 
   ): RequestExtractor[select.Out] =
-    apply().map { ai ⇒
+    apply.map { ai ⇒
       gen.to(ai)(key)
     }
 

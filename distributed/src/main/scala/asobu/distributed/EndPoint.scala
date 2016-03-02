@@ -4,7 +4,7 @@ import java.io.File
 
 import akka.actor.{ActorSelection, ActorRef}
 import akka.util.Timeout
-import asobu.distributed.Action.DistributedRequest
+import asobu.distributed.Action.{DistributedResult, DistributedRequest}
 import asobu.dsl.{ExtractResult, RequestExtractor}
 import play.api.mvc._, Results._
 import play.core.routing
@@ -45,8 +45,8 @@ case class Endpoint(definition: EndpointDefinition) extends EndpointRoute with E
     def handleMessageWithBackend(t: T): Future[Result] = {
       implicit val ak: Timeout = 10.minutes //todo: find the right place to configure this
       (handlerActor ? DistributedRequest(t, request.body)).collect {
-        case r: Result ⇒ r
-        case m         ⇒ InternalServerError(s"Unsupported result from backend ${m.getClass}")
+        case r: DistributedResult ⇒ r.toResult
+        case m                    ⇒ InternalServerError(s"Unsupported result from backend ${m.getClass}")
       }
     }
 

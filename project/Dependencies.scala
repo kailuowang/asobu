@@ -3,15 +3,16 @@ import sbt._
 
 object Dependencies {
   object Versions {
-    val play = "[2.3.0, 2.4.+)"
+    val play = "2.4.6"
     val specs2 = "3.6.6"
-    val akka = "[2.3.0, 2.4.+)"
+    val akka = "2.4.1"
   }
 
   val resolverSetting = resolvers ++= Seq(
     Resolver.sonatypeRepo("releases"),
     Resolver.sonatypeRepo("snapshots"),
-    Resolver.bintrayRepo("scalaz", "releases")
+    Resolver.bintrayRepo("scalaz", "releases"),
+    Resolver.bintrayRepo("kailuowang", "maven")
   )
 
 
@@ -19,11 +20,11 @@ object Dependencies {
     "com.typesafe.play" %% "play" % Versions.play % "provided",
     "com.typesafe.play" %% "play-json" % Versions.play % "provided",
     "com.typesafe.play" %% "play-cache" % Versions.play % "provided",
-    "com.typesafe.play" %% "routes-compiler" % Versions.play % "provided"
+    "com.typesafe.play" %% "routes-compiler" % Versions.play
   )
 
   val typelevel = Seq(
-    "com.milessabin" %% "kittens" % "1.0.0-M1"
+    "com.milessabin" %% "kittens" % "1.0.1-SNAPSHOT"
   )
 
 
@@ -44,8 +45,8 @@ object Dependencies {
   )
 
   val simulacrum = Seq(
-    addCompilerPlugin("org.scalamacros" % "paradise" % "2.1.0-M5" cross CrossVersion.full),
-    libraryDependencies += "com.github.mpilquist" %% "simulacrum" % "0.5.0"
+    addCompilerPlugin("org.scalamacros" % "paradise" % "2.1.0" cross CrossVersion.full),
+    libraryDependencies += "com.github.mpilquist" %% "simulacrum" % "0.7.0"
   )
 
   val settings = Seq(

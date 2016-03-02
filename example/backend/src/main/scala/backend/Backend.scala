@@ -3,12 +3,13 @@ package backend
 import akka.actor._
 import akka.cluster.Cluster
 import akka.routing.FromConfig
-import backend.endpoints.{TestMeEndpoint, RegistryClient}
+import asobu.distributed.EndpointRegistry.Add
+import backend.endpoints.{TestMeEndpoint}
 import com.typesafe.config.ConfigFactory
 import backend.factorial._
 import scala.collection.JavaConversions._
 import scala.concurrent.Await
-import scala.concurrent.duration.Duration
+import scala.concurrent.duration.{FiniteDuration, Duration}
 
 /**
  * Booting a cluster backend node with all actors
@@ -31,16 +32,13 @@ object Backend extends App {
     .withFallback(ConfigFactory.load())
   )
 
-
   // Deploy actors and services
   FactorialBackend startOn system
 
   Cluster(system).registerOnMemberUp {
     val registry = system.actorOf(FromConfig.props(), name = "endpointsRegistryRouter")
 
-    TestMeEndpoint.endpointDefs.foreach { ed =>
-      registry !
-    }
+    registry ! Add(TestMeEndpoint.endpointDefs)
 
   }
 

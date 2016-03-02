@@ -6,6 +6,7 @@ import cats.data.Kleisli
 import play.api.mvc.{Request, AnyContent}
 
 import ExtractResult._
+import shapeless.Witness
 import scala.util.{Failure, Success, Try}
 
 object HeaderExtractors {
@@ -17,4 +18,5 @@ object HeaderExtractors {
 
     fromTry(parsed)
   })
+
 }

@@ -1,9 +1,10 @@
 package asobu.distributed
 
 import akka.actor._
-import asobu.distributed.Action.{DistributedRequest, UnrecognizedMessage}
+import asobu.distributed.Action.{DistributedResult, DistributedRequest, UnrecognizedMessage}
 import asobu.distributed.Endpoint.Prefix
-import play.api.mvc.{Result, AnyContent}
+import play.api.libs.iteratee.{Enumerator, Iteratee}
+import play.api.mvc.{ResponseHeader, Result, AnyContent}
 import play.routes.compiler.Route
 
 import scala.concurrent.Future
@@ -15,7 +16,7 @@ trait Action {
 
   type ExtractedRemotely = extractors.LExtracted
 
-  def name: String = getClass.getName.stripMargin('$').replace('$', '.')
+  def name: String = getClass.getName.stripSuffix("$").replace('$', '.')
 
   def endpointDefinition(route: Route, prefix: Prefix)(implicit arf: ActorRefFactory): EndpointDefinition = {
     val handlerActor = arf.actorOf(Props(new RemoteHandler).withDeploy(Deploy.local))
@@ -39,7 +40,7 @@ trait Action {
 
   }
 
-  def backend(t: TMessage): Future[Result]
+  def backend(t: TMessage): Future[DistributedResult]
 
 }
 
@@ -48,7 +49,31 @@ object Action {
 
   case object UnrecognizedMessage
 
+  case class HttpStatus(code: Int) extends AnyVal
+
   case class DistributedRequest[ExtractedT](extracted: ExtractedT, body: AnyContent)
+
+  case class DistributedResult(
+      status: HttpStatus,
+      headers: Map[String, String] = Map.empty,
+      body: Array[Byte] = Array.empty
+  ) {
+    def toResult = {
+      Result(new ResponseHeader(status.code, headers), Enumerator(body))
+    }
+  }
+
+  object DistributedResult {
+
+    implicit def from(r: Result): Future[DistributedResult] = {
+      import scala.concurrent.ExecutionContext.Implicits.global
+      (r.body run Iteratee.getChunks) map { chunks ⇒
+        val body = chunks.toArray.flatten
+        DistributedResult(HttpStatus(r.header.status), r.header.headers, body)
+
+      }
+    }
+  }
 
 }
 

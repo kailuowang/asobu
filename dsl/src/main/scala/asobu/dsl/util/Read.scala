@@ -25,4 +25,6 @@ trait ReadInstances {
 
 }
 
+object Read extends ReadInstances
+
 object ReadInstances extends ReadInstances

@@ -29,7 +29,7 @@ case class ExtractResult[T](v: XorTF[T]) {
 
 object ExtractResult {
   type XorTF[T] = XorT[Future, Result, T]
-  import CatsInstances._
+  import SerializableCatsInstances._
 
   @implicitNotFound("need an implicit way of handling Throwable as Result. You can import asobu.dsl.DefaultExtractorImplicits._ for a default simple implementation")
   type FallbackResult = Throwable ⇒ Result

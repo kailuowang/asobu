@@ -4,12 +4,14 @@ import javax.inject.{Inject, Provider, Singleton}
 
 import akka.actor._
 import akka.cluster.Cluster
+import asobu.distributed.Action.DistributedResult
 import asobu.distributed.EndpointRegistry.Add
 import asobu.dsl.{RequestExtractor, Directive}
 import cats.data.Xor
+import play.api.libs.json.Json
 import play.api.{Configuration, Environment}
 import play.api.inject.Module
-import play.api.mvc.{Result, Headers, AnyContent, Request}
+import play.api.mvc._
 import shapeless.HList
 
 import scala.concurrent.{Future, Await, Promise}
@@ -23,6 +25,10 @@ class TestEndpointRegistry extends Actor with ActorLogging {
 
   def receive: Receive = running(Nil)
 
+  import context.dispatcher
+  import concurrent._
+
+  context.system.scheduler.schedule(Duration.Zero, 10.seconds, self, MockRequest("/ep1/a/1", headers = Headers("bar" -> "BBBB")) )
 
   def running(endpoints: List[Endpoint]): Receive = {
     ({
@@ -35,22 +41,23 @@ class TestEndpointRegistry extends Actor with ActorLogging {
 
   private def receiveBy(endpoints: List[Endpoint]): Receive = {
     def toPartial(endpoint: Endpoint): Receive = {
-      case req @ endpoint(rp) => endpoint.handle(rp, req)
+      case req @ endpoint(rp) =>
+        val rf = endpoint.handle(rp, req)
+        rf.foreach( r => println("response back" + r))
     }
-    endpoints.map(toPartial).reduce(_ orElse _)
+    endpoints.map(toPartial).foldLeft(PartialFunction.empty: Receive)(_ orElse _)
   }
-
 
 }
 
 
 case class MockRequest(path: String, headers: Headers = Headers()) extends Request[AnyContent] {
-  def body: AnyContent = ???
+  def body: AnyContent = AnyContentAsJson(Json.obj())
   def secure: Boolean = ???
   def uri: String = ???
   def remoteAddress: String = ???
-  def queryString: Map[String, Seq[String]] = ???
-  def method: String = ???
+  def queryString: Map[String, Seq[String]] = Map.empty
+  def method: String = "GET"
   def version: String = ???
   def tags: Map[String, String] = ???
   def id: Long = ???
