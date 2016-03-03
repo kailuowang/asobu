@@ -14,20 +14,20 @@ trait Action {
 
   val extractors: Extractors[TMessage]
 
-  type ExtractedRemotely = extractors.LExtracted
+  type ExtractedRemotely = extractors.LToSend
 
   def name: String = getClass.getName.stripSuffix("$").replace('$', '.')
 
   def endpointDefinition(route: Route, prefix: Prefix)(implicit arf: ActorRefFactory): EndpointDefinition = {
     val handlerActor = arf.actorOf(Props(new RemoteHandler).withDeploy(Deploy.local))
-    EndPointDefImpl(prefix, route, extractors.remoteExtractor, handlerActor)
+    EndPointDefImpl(prefix, route, extractors.remoteExtractorDef, handlerActor)
   }
 
   class RemoteHandler extends Actor {
     import context.dispatcher
     import cats.std.future._
     def receive: Receive = {
-      case dr: DistributedRequest[extractors.LExtracted] @unchecked ⇒
+      case dr: DistributedRequest[extractors.LToSend] @unchecked ⇒
 
         val tr = extractors.localExtract(dr)
         val replyTo = sender

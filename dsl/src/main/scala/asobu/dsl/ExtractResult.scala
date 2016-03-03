@@ -7,7 +7,7 @@ import cats.syntax.all._
 import play.api.mvc.{AnyContent, Request, Result}
 import shapeless.{HList, HNil}
 import scala.annotation.implicitNotFound
-import scala.concurrent.Future
+import scala.concurrent.{ExecutionContext, Future}
 import scala.util.Try
 
 /**
@@ -37,25 +37,25 @@ object ExtractResult {
   implicit def toXorTO[T](ox: ExtractResult[T]): XorTF[T] = ox.v
   implicit def toFutureXOr[T](xo: XorTF[T]): ExtractResult[T] = ExtractResult(xo)
 
-  implicit val monad: Monad[ExtractResult] = new Monad[ExtractResult] {
+  implicit def monad(implicit ex: ExecutionContext): Monad[ExtractResult] = new Monad[ExtractResult] {
     val xm = Monad[XorTF]
     def pure[A](x: A): ExtractResult[A] = xm.pure(x)
 
     def flatMap[A, B](fa: ExtractResult[A])(f: (A) ⇒ ExtractResult[B]): ExtractResult[B] = xm.flatMap(fa)(f(_))
   }
 
-  def left[T](r: Result): ExtractResult[T] = XorT.left[Future, Result, T](Future.successful(r))
+  def left[T](r: Result)(implicit ex: ExecutionContext): ExtractResult[T] = XorT.left[Future, Result, T](Future.successful(r))
 
-  def pure[T](t: T): ExtractResult[T] = monad.pure(t)
+  def pure[T](t: T)(implicit ex: ExecutionContext): ExtractResult[T] = monad.pure(t)
 
   def fromOption[T](o: Option[T], ifNone: ⇒ Result) = XorT(Future.successful(Xor.fromOption(o, ifNone)))
 
-  def right[T] = XorT.right[Future, Result, T] _
+  def right[T](implicit ex: ExecutionContext) = XorT.right[Future, Result, T] _
 
-  def fromTry[T](t: Try[T])(implicit ifFailure: FallbackResult): ExtractResult[T] =
+  def fromTry[T](t: Try[T])(implicit ifFailure: FallbackResult, ex: ExecutionContext): ExtractResult[T] =
     XorT.fromXor[Future](Xor.fromTry(t).leftMap(ifFailure))
 
-  def fromEither[T](fe: Future[Either[Result, T]]): ExtractResult[T] = {
+  def fromEither[T](fe: Future[Either[Result, T]])(implicit ex: ExecutionContext): ExtractResult[T] = {
     XorT(fe.map(Xor.fromEither))
   }
 

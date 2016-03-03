@@ -49,6 +49,8 @@ trait ExtractorBuilderSyntax {
    * e.g. compose(a = RequestExtractor(_.headers("aKey"))
    * or
    * compose(a = header("aKey"))  //header is method that constructor a more robust Extractor
+   * This function needs an implicit ExecutionContext in scope otherwise it will complain that
+   * RecordSequencer can't be find, because Functor of Future can't be found.
    */
   object compose extends shapeless.RecordArgs {
     def applyRecord[TFrom, Repr <: HList, Out <: HList](repr: Repr)(
@@ -63,7 +65,7 @@ trait ExtractorBuilderSyntax {
    * combine two extractors into one that takes two inputs as a tuple and returns a concated list of the two results
    * @return
    */
-  def combine[FromA, FromB, LA <: HList, LB <: HList, LOut <: HList](
+  def zip[FromA, FromB, LA <: HList, LB <: HList, LOut <: HList](
     ea: Extractor[FromA, LA],
     eb: Extractor[FromB, LB]
   )(
@@ -75,6 +77,16 @@ trait ExtractorBuilderSyntax {
       ra ← ea.run(a)
       rb ← eb.run(b)
     } yield ra ++ rb
+  }
+
+  def combine[TFrom, L1 <: HList, L2 <: HList, Out <: HList](self: Extractor[TFrom, L1], that: Extractor[TFrom, L2])(
+    implicit
+    prepend: Prepend.Aux[L1, L2, Out]
+  ): Extractor[TFrom, Out] = Extractor.fromFunction { (req: TFrom) ⇒
+    for {
+      eitherRepr ← self.run(req)
+      eitherThatR ← that.run(req)
+    } yield eitherRepr ++ eitherThatR
   }
 }
 
@@ -91,13 +103,7 @@ trait ExtractorOps {
     def and[ThatR <: HList, ResultR <: HList](that: Extractor[TFrom, ThatR])(
       implicit
       prepend: Prepend.Aux[Repr, ThatR, ResultR]
-    ): Extractor[TFrom, ResultR] = { (req: TFrom) ⇒
-
-      for {
-        eitherRepr ← self.run(req)
-        eitherThatR ← that.run(req)
-      } yield eitherRepr ++ eitherThatR
-    }
+    ): Extractor[TFrom, ResultR] = combine(self, that)
   }
 
 }

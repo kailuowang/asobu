@@ -3,7 +3,7 @@ package asobu.distributed
 import akka.actor.{ActorRef, ActorSelection}
 import asobu.distributed.Endpoint.Prefix
 import asobu.distributed.Extractors.RemoteExtractor
-import asobu.dsl.{RequestExtractor, ExtractResult}
+import asobu.dsl.{Extractor, RequestExtractor, ExtractResult}
 import asobu.dsl.util.HListOps.CombineTo
 import play.api.mvc.{AnyContent, Request}
 import play.core.routing.RouteParams
@@ -30,23 +30,22 @@ object EndpointDefinition {
   type Aux[T0] = EndpointDefinition { type T = T0 }
 }
 
-case class EndPointDefImpl[LExtracted <: HList](
+case class EndPointDefImpl[LExtracted <: HList, LParam <: HList, LExtra <: HList](
     prefix: Prefix,
     routeInfo: Route,
-    remoteExtractor: RemoteExtractor[LExtracted],
+    remoteExtractorDef: RemoteExtractorDef[LExtracted, LParam, LExtra],
     handlerActor: ActorRef
 ) extends EndpointDefinition {
 
   type T = LExtracted
-  def extract(routeParams: RouteParams, request: Request[AnyContent]): ExtractResult[LExtracted] = remoteExtractor.run((routeParams, request))
+  lazy implicit val prepend = remoteExtractorDef.prepend
+  def extract(routeParams: RouteParams, request: Request[AnyContent]): ExtractResult[LExtracted] = {
+    remoteExtractorDef.extractor.run((routeParams, request))
+  }
 }
 
 /**
  * Endpoint that takes no input at all, just match a route path
- *
- * @param prefix
- * @param routeInfo
- * @param remoteActor
  */
 case class NullaryEndpointDefinition(
     prefix: Prefix,
@@ -55,5 +54,8 @@ case class NullaryEndpointDefinition(
 ) extends EndpointDefinition {
 
   type T = HNil
-  def extract(routeParams: RouteParams, request: Request[AnyContent]): ExtractResult[T] = ExtractResult.pure(HNil)
+  def extract(routeParams: RouteParams, request: Request[AnyContent]): ExtractResult[T] = {
+    import scala.concurrent.ExecutionContext.Implicits.global
+    ExtractResult.pure(HNil)
+  }
 }

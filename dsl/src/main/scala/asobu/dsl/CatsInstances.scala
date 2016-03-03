@@ -2,7 +2,7 @@ package asobu.dsl
 
 import cats.functor.Contravariant
 
-import scala.concurrent.ExecutionContextExecutor
+import scala.concurrent.{ExecutionContext, ExecutionContextExecutor}
 
 trait CatsInstances extends SerializableCatsInstances {
   implicit val ex = scala.concurrent.ExecutionContext.Implicits.global
@@ -21,11 +21,12 @@ trait SerializableCatsInstances extends cats.std.AllInstances {
 
 object CatsInstances extends CatsInstances
 
-object SerializableCatsInstances extends SerializableCatsInstances {
-  implicit val ex: ExecutionContextExecutor = LocalExecutionContext
-}
+object SerializableCatsInstances extends SerializableCatsInstances
 
-case object LocalExecutionContext extends ExecutionContextExecutor with Serializable {
+case object LocalExecutionContext extends ExecutionContext with Serializable {
+
+  implicit val instance: ExecutionContext = this
+
   override def execute(command: Runnable): Unit = command.run()
 
   override def reportFailure(cause: Throwable): Unit = throw cause
