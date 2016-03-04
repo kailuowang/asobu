@@ -14,9 +14,7 @@ import shapeless._
  *
  * @tparam T
  */
-trait RequestExtractorDefinition[T] extends Serializable {
-  def apply(): RequestExtractor[T]
-}
+trait RequestExtractorDefinition[T] extends (() ⇒ RequestExtractor[T]) with Serializable
 
 object RequestExtractorDefinition extends PredefinedDefs {
   import LocalExecutionContext.instance //this always happens locally, and needs to be serializable
@@ -26,22 +24,23 @@ object RequestExtractorDefinition extends PredefinedDefs {
 
       val appR = Applicative[RequestExtractor]
 
-      def ap[A, B](ff: RequestExtractorDefinition[(A) ⇒ B])(fa: RequestExtractorDefinition[A]): RequestExtractorDefinition[B] = new RequestExtractorDefinition[B] {
-        def apply = appR.ap(ff.apply())(fa.apply())
-      }
+      def ap[A, B](ff: RequestExtractorDefinition[(A) ⇒ B])(fa: RequestExtractorDefinition[A]) =
+        new RequestExtractorDefinition[B] {
+          def apply = appR.ap(ff())(fa())
+        }
 
       def product[A, B](
         fa: RequestExtractorDefinition[A],
         fb: RequestExtractorDefinition[B]
-      ): RequestExtractorDefinition[(A, B)] = new RequestExtractorDefinition[(A, B)] {
-        def apply(): RequestExtractor[(A, B)] = appR.product(fa.apply(), fb.apply())
+      ) = new RequestExtractorDefinition[(A, B)] {
+        def apply(): RequestExtractor[(A, B)] = appR.product(fa(), fb())
       }
 
-      def map[A, B](fa: RequestExtractorDefinition[A])(f: (A) ⇒ B): RequestExtractorDefinition[B] = new RequestExtractorDefinition[B] {
-        def apply(): RequestExtractor[B] = fa.apply().map(f)
+      def map[A, B](fa: RequestExtractorDefinition[A])(f: (A) ⇒ B) = new RequestExtractorDefinition[B] {
+        def apply(): RequestExtractor[B] = fa().map(f)
       }
 
-      def pure[A](x: A): RequestExtractorDefinition[A] = new RequestExtractorDefinition[A] {
+      def pure[A](x: A) = new RequestExtractorDefinition[A] {
         def apply(): RequestExtractor[A] = appR.pure(x)
       }
 
@@ -51,14 +50,7 @@ object RequestExtractorDefinition extends PredefinedDefs {
     def apply = RequestExtractor.empty
   }
 
-  object compose extends shapeless.RecordArgs {
-    def applyRecord[TFrom, Repr <: HList, Out <: HList](repr: Repr)(
-      implicit
-      seq: RecordSequencer.Aux[Repr, RequestExtractorDefinition[Out]]
-    ): RequestExtractorDefinition[Out] = {
-      seq(repr)
-    }
-  }
+  def compose = cats.sequence.sequenceRecord
 
   /**
    * combine two extractors into one that returns a concated list of the two results
@@ -78,11 +70,13 @@ object RequestExtractorDefinition extends PredefinedDefs {
 }
 
 object PredefinedDefs {
+
   @SerialVersionUID(1L)
   case class Header[T: Read](key: String)(implicit fbr: FallbackResult) extends RequestExtractorDefinition[T] {
     import concurrent.ExecutionContext.Implicits.global
     def apply() = HeaderExtractors.header(key)
   }
+
 }
 
 trait PredefinedDefs {

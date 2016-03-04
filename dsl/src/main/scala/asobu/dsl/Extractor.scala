@@ -52,14 +52,7 @@ trait ExtractorBuilderSyntax {
    * This function needs an implicit ExecutionContext in scope otherwise it will complain that
    * RecordSequencer can't be find, because Functor of Future can't be found.
    */
-  object compose extends shapeless.RecordArgs {
-    def applyRecord[TFrom, Repr <: HList, Out <: HList](repr: Repr)(
-      implicit
-      seq: RecordSequencer.Aux[Repr, Extractor[TFrom, Out]]
-    ): Extractor[TFrom, Out] = {
-      seq(repr)
-    }
-  }
+  def compose = sequenceRecord
 
   /**
    * combine two extractors into one that takes two inputs as a tuple and returns a concated list of the two results
@@ -82,11 +75,8 @@ trait ExtractorBuilderSyntax {
   def combine[TFrom, L1 <: HList, L2 <: HList, Out <: HList](self: Extractor[TFrom, L1], that: Extractor[TFrom, L2])(
     implicit
     prepend: Prepend.Aux[L1, L2, Out]
-  ): Extractor[TFrom, Out] = Extractor.fromFunction { (req: TFrom) ⇒
-    for {
-      eitherRepr ← self.run(req)
-      eitherThatR ← that.run(req)
-    } yield eitherRepr ++ eitherThatR
+  ): Extractor[TFrom, Out] = {
+    (self |@| that) map (_ ++ _)
   }
 }
 
