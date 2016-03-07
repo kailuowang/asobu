@@ -1,10 +1,13 @@
 package asobu.distributed
 
+import asobu.distributed.Extractors.RouteParamsExtractor
 import asobu.dsl.{LocalExecutionContext, RequestExtractor, Extractor}
+import cats.Applicative
+import cats.data.{Kleisli, Xor}
 import org.specs2.concurrent.ExecutionEnv
 import org.specs2.mutable.Specification
 import play.api.libs.json.{JsNumber, Json}
-import play.api.mvc.{Request, AnyContent}
+import play.api.mvc.{Result, Request, AnyContent}
 import play.api.test.FakeRequest
 import play.core.routing.RouteParams
 import shapeless._
@@ -71,10 +74,8 @@ object ExtractorsSpec extends Specification {
     val reqExtractor = compose(foo = header[String]("foo_h"))
     val bodyExtractor = BodyExtractor.empty
 
-    val remoteExtractorDef = {
-      import LocalExecutionContext._
+    val remoteExtractorDef =
       Extractors.build[MyMessage](reqExtractor, bodyExtractor).remoteExtractorDef
-    }
 
     val r = new ObjectOutputStream(new ByteArrayOutputStream()).writeObject(remoteExtractorDef)
     r must be_!=(null)

@@ -9,6 +9,8 @@ import shapeless.{HList, HNil}
 import scala.annotation.implicitNotFound
 import scala.concurrent.{ExecutionContext, Future}
 import scala.util.Try
+import language.implicitConversions
+import SerializableCatsInstances._
 
 /**
  * This is basically a replacement of type alias `type ExtractResult[T] = XorT[Future, Result, T]`
@@ -29,7 +31,6 @@ case class ExtractResult[T](v: XorTF[T]) {
 
 object ExtractResult {
   type XorTF[T] = XorT[Future, Result, T]
-  import SerializableCatsInstances._
 
   @implicitNotFound("need an implicit way of handling Throwable as Result. You can import asobu.dsl.DefaultExtractorImplicits._ for a default simple implementation")
   type FallbackResult = Throwable ⇒ Result

@@ -17,11 +17,10 @@ import shapeless._
 trait RequestExtractorDefinition[T] extends (() ⇒ RequestExtractor[T]) with Serializable
 
 object RequestExtractorDefinition extends PredefinedDefs {
-  import LocalExecutionContext.instance //this always happens locally, and needs to be serializable
 
   implicit def app: Applicative[RequestExtractorDefinition] =
     new Applicative[RequestExtractorDefinition] {
-
+      import LocalExecutionContext.instance //the definition composing always happens locally, and needs to be serializable
       val appR = Applicative[RequestExtractor]
 
       def ap[A, B](ff: RequestExtractorDefinition[(A) ⇒ B])(fa: RequestExtractorDefinition[A]) =

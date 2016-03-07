@@ -37,7 +37,8 @@ trait Extractors[TMessage] {
 }
 
 object Extractors {
-  type RouteParamsExtractor[T] = Extractor[RouteParams, T]
+  type RouteParamsExtractor[T] = Kleisli[SyncedExtractResult, RouteParams, T]
+
   /**
    * Extract information at the gateway end
    */
@@ -60,7 +61,6 @@ object Extractors {
       type LToSend = LExtracted
       type LParam = LParamExtracted
       type LExtra = LRemoteExtra
-      import LocalExecutionContext.instance
       val remoteExtractorDef = RemoteExtractorDef(rpeb, remoteRequestExtractorDefs)
 
       def localExtract(dr: DistributedRequest[LToSend]): ExtractResult[TMessage] = {
@@ -80,8 +80,11 @@ case class RemoteExtractorDef[LExtracted <: HList, LParamExtracted <: HList, LRe
     requestExtractorDefinition: RequestExtractorDefinition[LRemoteExtra]
 )(implicit val prepend: Prepend.Aux[LParamExtracted, LRemoteExtra, LExtracted]) {
 
-  lazy val extractor: RemoteExtractor[LExtracted] =
-    Extractor.zip(routeParamsExtractorBuilder(), requestExtractorDefinition.apply())
+  lazy val extractor: RemoteExtractor[LExtracted] = {
+    val rpe = routeParamsExtractorBuilder()
+    import scala.concurrent.ExecutionContext.Implicits.global
+    Extractor.zip(rpe.mapF(r ⇒ fromXor(r.v)), requestExtractorDefinition.apply())
+  }
 
 }
 
@@ -113,13 +116,13 @@ trait MkRouteParamsExtractorBuilder0 {
     implicit def caseKV[K <: Symbol, V: RouteParamRead](
       implicit
       w: Witness.Aux[K]
-    ): Case.Aux[FieldKV[K, V], FieldType[K, Kleisli[ExtractResult, RouteParams, V]]] =
+    ): Case.Aux[FieldKV[K, V], FieldType[K, Kleisli[SyncedExtractResult, RouteParams, V]]] =
       at[FieldKV[K, V]] { kv ⇒
-        field[K](Kleisli { (params: RouteParams) ⇒
+        field[K](Kleisli[SyncedExtractResult, RouteParams, V] { (params: RouteParams) ⇒
           val field: String = w.value.name
           val pe = RouteParamRead[V]
           val extracted = pe(field, params)
-          fromXor(extracted.leftMap(m ⇒ BadRequest(Json.obj("error" → s"missing field $field $m"))))
+          extracted.leftMap(m ⇒ BadRequest(Json.obj("error" → s"missing field $field $m")))
         })
       }
   }
@@ -131,7 +134,7 @@ trait MkRouteParamsExtractorBuilder0 {
     sequence: RecordSequencer[KleisliRepr]
   ): RouteParamsExtractorBuilder[Repr] = new RouteParamsExtractorBuilder[Repr] {
     def apply(): RouteParamsExtractor[Repr] =
-      sequence(ks().map(kvToKlesili)).asInstanceOf[Kleisli[ExtractResult, RouteParams, Repr]] //this cast is needed because a RecordSequencer.Aux can't find the Repr if Repr is not explicitly defined. The cast is safe because the mapper guarantee the result type. todo: find a way to get rid of the cast
+      sequence(ks().map(kvToKlesili)).asInstanceOf[Kleisli[SyncedExtractResult, RouteParams, Repr]] //this cast is needed because a RecordSequencer.Aux can't find the Repr if Repr is not explicitly defined. The cast is safe because the mapper guarantee the result type. todo: find a way to get rid of the cast
   }
 
 }
@@ -141,7 +144,7 @@ object RouteParamsExtractorBuilder extends MkRouteParamsExtractorBuilder0 {
   def apply[T <: HList](implicit rpe: RouteParamsExtractorBuilder[T]): RouteParamsExtractorBuilder[T] = rpe
 
   implicit val empty: RouteParamsExtractorBuilder[HNil] = new RouteParamsExtractorBuilder[HNil] {
-    def apply() = Extractor.empty[RouteParams]
+    def apply() = Kleisli[SyncedExtractResult, RouteParams, HNil](_ ⇒ Xor.right(HNil))
   }
 }
 

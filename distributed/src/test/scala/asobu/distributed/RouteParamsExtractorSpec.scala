@@ -1,5 +1,6 @@
 package asobu.distributed
 
+import asobu.distributed.Extractors.RouteParamsExtractor
 import org.specs2.concurrent.ExecutionEnv
 import org.specs2.mutable.Specification
 import play.core.routing.RouteParams
@@ -9,30 +10,30 @@ import asobu.dsl.CatsInstances._
 
 class RouteParamsExtractorSpec extends Specification {
 
-  "generates from Record T" >> { implicit ex: ExecutionEnv ⇒
+  "generates from Record T" >> {
     type Rec = Record.`'x -> Int, 'y -> String, 'z -> Boolean`.T
 
     val rpe = RouteParamsExtractor[Rec]
     val result = rpe.run(RouteParams(Map("x" → Right("3")), Map.empty))
-    result.isLeft must beTrue.await
+    result.isLeft must beTrue
 
     val result2 = rpe.run(RouteParams(Map("x" → Right("3"), "y" → Right("a"), "z" → Right("true")), Map.empty))
-    result2.getOrElse(null) must be_==(Record(x = 3, y = "a", z = true)).await
+    result2.getOrElse(null) must be_==(Record(x = 3, y = "a", z = true))
   }
 
-  "generates from record with a single field" >> { implicit ex: ExecutionEnv ⇒
+  "generates from record with a single field" >> {
     type Rec = Record.`'z -> Boolean`.T
 
     val rpe = RouteParamsExtractor[Rec]
     val result = rpe.run(RouteParams(Map("z" → Right("true")), Map.empty))
-    result.getOrElse(null) must be_==(Record(z = true)).await
+    result.getOrElse(null) must be_==(Record(z = true))
 
   }
 
-  "generates empty from HNil" >> { implicit ex: ExecutionEnv ⇒
+  "generates empty from HNil" >> {
     val rpe = RouteParamsExtractor[HNil]
     val result = rpe.run(RouteParams(Map("x" → Right("3")), Map.empty))
-    result.getOrElse(null) must be_==(HNil).await
+    result.getOrElse(null) must be_==(HNil)
   }
 
 }
