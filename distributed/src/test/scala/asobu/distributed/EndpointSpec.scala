@@ -51,7 +51,7 @@ object EndpointSpec extends PlaySpecification {
   "unapply" >> {
 
     def extractParams(epd: EndpointDefinition, request: RequestHeader): Option[RouteParams] = {
-      val endpoint = Endpoint(epd)
+      val endpoint = Endpoint(epd)(null)
       request match {
         case endpoint(params) ⇒ Some(params)
         case _                ⇒ None

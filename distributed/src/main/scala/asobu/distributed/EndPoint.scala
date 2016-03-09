@@ -2,9 +2,10 @@ package asobu.distributed
 
 import java.io.File
 
-import akka.actor.{ActorSelection, ActorRef}
+import akka.actor.{ActorRefFactory, ActorSelection, ActorRef}
 import akka.util.Timeout
 import asobu.distributed.Action.{DistributedResult, DistributedRequest}
+import asobu.distributed.gateway.ClusterRouters
 import asobu.dsl.{ExtractResult, RequestExtractor}
 import play.api.mvc._, Results._
 import play.core.routing
@@ -26,30 +27,35 @@ trait EndpointHandler {
   def handle(routeParams: RouteParams, request: Request[AnyContent]): Future[Result]
 }
 
-case class Endpoint(definition: EndpointDefinition) extends EndpointRoute with EndpointHandler {
+case class Endpoint(definition: EndpointDefinition)(implicit arf: ActorRefFactory) extends EndpointRoute with EndpointHandler {
   import ExecutionContext.Implicits.global
 
   type T = definition.T
 
   import RoutesCompilerExtra._
   import definition._, definition.routeInfo._
+  implicit val ak: Timeout = 10.minutes //todo: find the right place to configure this
 
   lazy val defaultPrefix: String = {
     if (prefix.value.endsWith("/")) "" else "/"
   }
 
+  private val handlerRef: ActorRef = {
+    definition.clusterRole.fold(handlerActor) { role ⇒
+      val props = ClusterRouters.adaptive(handlerActor.path.toStringWithoutAddress, role)
+      arf.actorOf(props, handlerActor.path.name + "-Router")
+    }
+  }
+
   def unapply(request: Request[AnyContent]): Option[RouteParams] = routeExtractors.unapply(request)
 
   def handle(routeParams: RouteParams, request: Request[AnyContent]): Future[Result] = {
-
     def handleMessageWithBackend(t: T): Future[Result] = {
-      implicit val ak: Timeout = 10.minutes //todo: find the right place to configure this
-      (handlerActor ? DistributedRequest(t, request.body)).collect {
+      (handlerRef ? DistributedRequest(t, request.body)).collect {
         case r: DistributedResult ⇒ r.toResult
         case m                    ⇒ InternalServerError(s"Unsupported result from backend ${m.getClass}")
       }
     }
-
     val message = definition.extract(routeParams, request)
     message.fold[Future[Result]](
       Future.successful(_),

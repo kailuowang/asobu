@@ -6,6 +6,7 @@ import asobu.distributed.Endpoint.Prefix
 import play.routes.compiler._
 
 import scala.io.Source
+import scala.util.Try
 
 object EndpointParser {
 
@@ -17,13 +18,21 @@ object EndpointParser {
     parseContent(prefix, content, "remote-routes").right.map(_.map(createEndpointDef(_, prefix)))
   }
 
+  //to conform to play api
+  private def placeHolderFile(resourceName: String) = new File(resourceName)
+
   def parseResource(
     prefix: Prefix,
     resourceName: String = "remote.routes"
   ): Either[Seq[RoutesCompilationError], List[Route]] = {
-    val content = Source.fromInputStream(getClass.getClassLoader.getResourceAsStream(resourceName)).mkString
+    def routesFileNotFound = RoutesCompilationError(placeHolderFile(resourceName), s"$resourceName doesn't exsit in resources.", None, None)
 
-    parseContent(prefix, content, resourceName)
+    Option(getClass.getClassLoader.getResourceAsStream(resourceName))
+      .toRight(List(routesFileNotFound))
+      .right.flatMap { inputStream ⇒
+        val content = Source.fromInputStream(inputStream).mkString
+        parseContent(prefix, content, resourceName)
+      }
   }
 
   def parseContent(
@@ -35,10 +44,10 @@ object EndpointParser {
     import cats.std.either._
     import cats.syntax.traverse._
 
-    val placeholderFile = new File(resourceName) //to conform to play api
+    val phf = placeHolderFile(resourceName) //to conform to play api
 
-    lazy val unsupportedError = Seq(RoutesCompilationError(placeholderFile, "doesn't support anything but route", None, None))
-    RoutesFileParser.parseContent(content, placeholderFile).right.flatMap { routes ⇒
+    lazy val unsupportedError = Seq(RoutesCompilationError(phf, "doesn't support anything but route", None, None))
+    RoutesFileParser.parseContent(content, phf).right.flatMap { routes ⇒
       routes.traverse[Either[Seq[RoutesCompilationError], ?], Route] {
         case r: Route ⇒ Right(r)
         case _        ⇒ Left(unsupportedError)

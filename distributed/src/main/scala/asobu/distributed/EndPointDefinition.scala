@@ -24,6 +24,7 @@ trait EndpointDefinition {
   val prefix: Prefix
   def extract(routeParams: RouteParams, request: Request[AnyContent]): ExtractResult[T]
   def handlerActor: ActorRef
+  def clusterRole: Option[String] //also indicate if this handlerActor is in a cluster
 }
 
 object EndpointDefinition {
@@ -34,7 +35,8 @@ case class EndPointDefImpl[LExtracted <: HList, LParam <: HList, LExtra <: HList
     prefix: Prefix,
     routeInfo: Route,
     remoteExtractorDef: RemoteExtractorDef[LExtracted, LParam, LExtra],
-    handlerActor: ActorRef
+    handlerActor: ActorRef,
+    clusterRole: Option[String] = None
 ) extends EndpointDefinition {
 
   type T = LExtracted
@@ -50,7 +52,8 @@ case class EndPointDefImpl[LExtracted <: HList, LParam <: HList, LExtra <: HList
 case class NullaryEndpointDefinition(
     prefix: Prefix,
     routeInfo: Route,
-    handlerActor: ActorRef
+    handlerActor: ActorRef,
+    clusterRole: Option[String] = None
 ) extends EndpointDefinition {
 
   type T = HNil

@@ -1,6 +1,7 @@
 package asobu.distributed
 
 import akka.actor._
+import akka.cluster.Cluster
 import asobu.distributed.Action.{DistributedResult, DistributedRequest, UnrecognizedMessage}
 import asobu.distributed.Endpoint.Prefix
 import play.api.libs.iteratee.{Enumerator, Iteratee}
@@ -16,11 +17,11 @@ trait Action {
 
   type ExtractedRemotely = extractors.LToSend
 
-  def name: String = getClass.getName.stripSuffix("$").replace('$', '.')
+  def name: String
 
-  def endpointDefinition(route: Route, prefix: Prefix)(implicit arf: ActorRefFactory): EndpointDefinition = {
-    val handlerActor = arf.actorOf(Props(new RemoteHandler).withDeploy(Deploy.local))
-    EndPointDefImpl(prefix, route, extractors.remoteExtractorDef, handlerActor)
+  def endpointDefinition(route: Route, prefix: Prefix)(implicit sys: ActorSystem): EndpointDefinition = {
+    val handlerActor = sys.actorOf(Props(new RemoteHandler).withDeploy(Deploy.local), name + "_Handler")
+    EndPointDefImpl(prefix, route, extractors.remoteExtractorDef, handlerActor, Cluster(sys).selfRoles.headOption)
   }
 
   class RemoteHandler extends Actor {
@@ -76,4 +77,3 @@ object Action {
   }
 
 }
-

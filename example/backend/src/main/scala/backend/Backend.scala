@@ -3,13 +3,16 @@ package backend
 import akka.actor._
 import akka.cluster.Cluster
 import akka.routing.FromConfig
+import akka.util.Timeout
 import asobu.distributed.EndpointRegistry.Add
+import asobu.distributed.{EndpointDefinition, EndpointRegistryClient}
 import backend.endpoints.{TestMeEndpoint}
 import com.typesafe.config.ConfigFactory
 import backend.factorial._
 import scala.collection.JavaConversions._
-import scala.concurrent.Await
+import scala.concurrent.{Future, Await}
 import scala.concurrent.duration.{FiniteDuration, Duration}
+import scala.util.Try
 
 /**
  * Booting a cluster backend node with all actors
@@ -37,9 +40,23 @@ object Backend extends App {
 
   Cluster(system).registerOnMemberUp {
     val registry = system.actorOf(FromConfig.props(), name = "endpointsRegistryRouter")
+    implicit val rec: EndpointRegistryClient = new EndpointRegistryClient {
+      import akka.pattern.ask
+      import concurrent.duration._
+      import concurrent.ExecutionContext.Implicits.global
+      implicit val ao: Timeout = 50.seconds //todo: be smarter about this
+      def add(endpointDefinition: EndpointDefinition): Future[Unit] = (registry ? Add(List(endpointDefinition))).map(_ => ())
+    }
 
-    registry ! Add(TestMeEndpoint.endpointDefs)
+    val initControllers = Try {
+      TestMeEndpoint()
+    }
 
+    initControllers.recover {
+      case e: Throwable =>
+        system.log.error(e, s"Cannot initialize controllers, Exiting")
+        system.terminate()
+    }
   }
 
 }
