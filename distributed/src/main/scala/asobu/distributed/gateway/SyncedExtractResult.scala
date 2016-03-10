@@ -1,4 +1,4 @@
-package asobu.distributed
+package asobu.distributed.gateway
 
 import asobu.dsl.SerializableCatsInstances._
 import cats.Monad

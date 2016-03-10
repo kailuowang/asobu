@@ -1,8 +1,10 @@
-package asobu.distributed
+package asobu.distributed.service
 
 import akka.actor.{ActorSystem, ActorRefFactory, ActorRef}
 import akka.util.Timeout
-import asobu.distributed.Action.DistributedResult
+import Action.DistributedResult
+import asobu.distributed.{RequestExtractorDefinition, EndpointDefinition}
+import asobu.distributed.service.Controller
 import asobu.dsl.Extractor
 
 import scala.concurrent.{ExecutionContext, Future}

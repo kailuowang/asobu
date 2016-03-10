@@ -1,14 +1,14 @@
-package asobu.distributed
+package asobu.distributed.service
 
 import java.io.File
 
-import asobu.distributed.Endpoint.Prefix
-import play.routes.compiler._
+import asobu.distributed.EndpointDefinition
+import asobu.distributed.gateway.Endpoint.Prefix
+import play.routes.compiler.{Route, RoutesCompilationError, RoutesFileParser}
 
 import scala.io.Source
-import scala.util.Try
 
-object EndpointParser {
+object EndpointDefinitionParser {
 
   private[distributed] def parse(
     prefix: Prefix,
@@ -40,8 +40,8 @@ object EndpointParser {
     content: String,
     resourceName: String
   ): Either[Seq[RoutesCompilationError], List[Route]] = {
-    import cats.std.list._
     import cats.std.either._
+    import cats.std.list._
     import cats.syntax.traverse._
 
     val phf = placeHolderFile(resourceName) //to conform to play api

@@ -1,4 +1,6 @@
-package asobu.distributed
+package asobu.distributed.gateway
+
+import asobu.distributed.EndpointDefinition
 
 trait EndpointRegistry {
 

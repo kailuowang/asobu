@@ -1,13 +1,10 @@
-package asobu.distributed
+package asobu.distributed.service
 
-import asobu.distributed.Extractors.RouteParamsExtractor
-import asobu.dsl.{LocalExecutionContext, RequestExtractor, Extractor}
-import cats.Applicative
-import cats.data.{Kleisli, Xor}
+import asobu.distributed.RequestExtractorDefinition
 import org.specs2.concurrent.ExecutionEnv
 import org.specs2.mutable.Specification
 import play.api.libs.json.{JsNumber, Json}
-import play.api.mvc.{Result, Request, AnyContent}
+import play.api.mvc.{AnyContent, Request}
 import play.api.test.FakeRequest
 import play.core.routing.RouteParams
 import shapeless._
@@ -68,7 +65,8 @@ object ExtractorsSpec extends Specification {
   }
 
   "remote extractor should be serializable" >> {
-    import java.io.{ObjectOutputStream, ByteArrayOutputStream}
+    import java.io.{ByteArrayOutputStream, ObjectOutputStream}
+
     import asobu.dsl.DefaultExtractorImplicits._
 
     val reqExtractor = compose(foo = header[String]("foo_h"))

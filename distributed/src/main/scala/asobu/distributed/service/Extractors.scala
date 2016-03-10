@@ -1,7 +1,11 @@
-package asobu.distributed
+package asobu.distributed.service
 
-import asobu.distributed.Action.DistributedRequest
-import asobu.distributed.Extractors._
+import asobu.distributed.service.Action.DistributedRequest
+import asobu.distributed.service.Extractors._
+import asobu.distributed.RequestExtractorDefinition
+import asobu.distributed.gateway.SyncedExtractResult
+import asobu.distributed.service.Action.DistributedRequest
+import asobu.distributed.service.Extractors.{RouteParamsExtractor, BodyExtractor, RemoteExtractor}
 import asobu.dsl._
 import asobu.dsl.extractors.JsonBodyExtractor
 import asobu.dsl.util.HListOps.{CombineTo, RestOf2}
@@ -96,14 +100,6 @@ object BodyExtractor {
     json[T] map (lgen.to(_))
   }
 
-}
-
-object RemoteExtractor {
-  val empty = Extractor.empty[(RouteParams, Request[AnyContent])]
-}
-
-object RouteParamsExtractor {
-  def apply[L <: HList](implicit builder: RouteParamsExtractorBuilder[L]): RouteParamsExtractor[L] = builder()
 }
 
 @implicitNotFound("Cannot construct RouteParamsExtractor out of ${L}")

@@ -4,17 +4,14 @@ import javax.inject.{Inject, Provider, Singleton}
 
 import akka.actor._
 import akka.cluster.Cluster
-import asobu.distributed.Action.DistributedResult
-import asobu.distributed.EndpointRegistry.Add
-import asobu.dsl.{RequestExtractor, Directive}
-import cats.data.Xor
+import asobu.distributed.gateway.Endpoint
+import asobu.distributed.gateway.EndpointRegistry.Add
 import play.api.libs.json.Json
 import play.api.{Configuration, Environment}
 import play.api.inject.Module
 import play.api.mvc._
-import shapeless.HList
 
-import scala.concurrent.{Future, Await, Promise}
+import scala.concurrent.{Await, Promise}
 import scala.concurrent.duration._
 
 

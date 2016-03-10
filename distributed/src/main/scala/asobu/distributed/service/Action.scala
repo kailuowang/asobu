@@ -1,9 +1,9 @@
-package asobu.distributed
-
+package asobu.distributed.service
 import akka.actor._
 import akka.cluster.Cluster
-import asobu.distributed.Action.{DistributedResult, DistributedRequest, UnrecognizedMessage}
-import asobu.distributed.Endpoint.Prefix
+import Action.{DistributedResult, DistributedRequest, UnrecognizedMessage}
+import asobu.distributed.gateway.Endpoint.Prefix
+import asobu.distributed.{EndPointDefImpl, EndpointDefinition}
 import play.api.libs.iteratee.{Enumerator, Iteratee}
 import play.api.mvc.{ResponseHeader, Result, AnyContent}
 import play.routes.compiler.Route

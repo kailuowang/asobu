@@ -4,9 +4,10 @@ import akka.actor._
 import akka.cluster.Cluster
 import akka.routing.FromConfig
 import akka.util.Timeout
-import asobu.distributed.EndpointRegistry.Add
-import asobu.distributed.{EndpointDefinition, EndpointRegistryClient}
-import backend.endpoints.{TestMeEndpoint}
+import asobu.distributed.gateway.EndpointRegistry.Add
+import asobu.distributed.EndpointDefinition
+import asobu.distributed.service.EndpointRegistryClient
+import backend.endpoints.TestMeEndpoint
 import com.typesafe.config.ConfigFactory
 import backend.factorial._
 import scala.collection.JavaConversions._

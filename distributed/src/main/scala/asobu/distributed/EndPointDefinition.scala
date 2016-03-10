@@ -1,8 +1,9 @@
 package asobu.distributed
 
 import akka.actor.{ActorRef, ActorSelection}
-import asobu.distributed.Endpoint.Prefix
-import asobu.distributed.Extractors.RemoteExtractor
+import asobu.distributed.gateway.Endpoint.Prefix
+import asobu.distributed.service.Extractors.RemoteExtractor
+import asobu.distributed.service.RemoteExtractorDef
 import asobu.dsl.{Extractor, RequestExtractor, ExtractResult}
 import asobu.dsl.util.HListOps.CombineTo
 import play.api.mvc.{AnyContent, Request}
@@ -40,7 +41,9 @@ case class EndPointDefImpl[LExtracted <: HList, LParam <: HList, LExtra <: HList
 ) extends EndpointDefinition {
 
   type T = LExtracted
+
   lazy implicit val prepend = remoteExtractorDef.prepend
+
   def extract(routeParams: RouteParams, request: Request[AnyContent]): ExtractResult[LExtracted] = {
     remoteExtractorDef.extractor.run((routeParams, request))
   }

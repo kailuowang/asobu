@@ -1,23 +1,17 @@
-package asobu.distributed
+package asobu.distributed.gateway
 
-import java.io.File
-
-import akka.actor.{ActorRefFactory, ActorSelection, ActorRef}
+import akka.actor.{ActorRef, ActorRefFactory}
 import akka.util.Timeout
-import asobu.distributed.Action.{DistributedResult, DistributedRequest}
-import asobu.distributed.gateway.ClusterRouters
-import asobu.dsl.{ExtractResult, RequestExtractor}
-import play.api.mvc._, Results._
+import asobu.distributed.service.Action.{DistributedResult, DistributedRequest}
+import asobu.distributed.EndpointDefinition
+import play.api.mvc.Results._
+import play.api.mvc.{Result, AnyContent, Request}
 import play.core.routing
 import play.core.routing.Route.ParamsExtractor
 import play.core.routing.RouteParams
-import play.routes.compiler._
-import shapeless.{HNil, HList}
-
-import scala.concurrent.{ExecutionContext, Future}
-import scala.concurrent.duration._
-import akka.pattern.ask
-import cats.std.future._
+import play.routes.compiler.{DynamicPart, PathPart, StaticPart}
+import cats.std.all._
+import scala.concurrent.{ExecutionContext, Future, duration}, duration._
 
 trait EndpointRoute {
   def unapply(requestHeader: Request[AnyContent]): Option[RouteParams]
@@ -50,6 +44,7 @@ case class Endpoint(definition: EndpointDefinition)(implicit arf: ActorRefFactor
   def unapply(request: Request[AnyContent]): Option[RouteParams] = routeExtractors.unapply(request)
 
   def handle(routeParams: RouteParams, request: Request[AnyContent]): Future[Result] = {
+    import akka.pattern.ask
     def handleMessageWithBackend(t: T): Future[Result] = {
       (handlerRef ? DistributedRequest(t, request.body)).collect {
         case r: DistributedResult ⇒ r.toResult

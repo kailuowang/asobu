@@ -1,13 +1,15 @@
-package asobu.distributed
+package asobu.distributed.service
 
-import akka.actor.{ActorSystem, ActorRefFactory}
-import asobu.distributed.Endpoint.Prefix
+import akka.actor.ActorSystem
+import asobu.distributed.gateway.Endpoint.Prefix
+import asobu.distributed.EndpointDefinition
 import play.routes.compiler.{HandlerCall, Route}
 
 import scala.concurrent.{ExecutionContext, Future}
 
-trait DistributedController extends Controller with Syntax with PredefinedDefs
-
+/**
+ * Bare bone controller without syntax and facilitators, use [[DistributedController]] in normal cases
+ */
 trait Controller {
   /**
    * Used to get route file "$name.route"
@@ -17,7 +19,7 @@ trait Controller {
   def name: String = getClass.getSimpleName.stripSuffix("$")
   def prefix = Prefix("/")
 
-  lazy val routes: List[Route] = EndpointParser.parseResource(prefix, s"$name.routes") match {
+  lazy val routes: List[Route] = EndpointDefinitionParser.parseResource(prefix, s"$name.routes") match {
     case Right(rs) ⇒ rs
     case Left(err) ⇒ throw RoutesParsingException(err.map(_.toString).mkString(". "))
   }

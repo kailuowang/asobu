@@ -1,7 +1,7 @@
-package asobu.distributed
+package asobu.distributed.gateway
 
 /**
- * the yet to release routes compiler code
+ * the yet to release routes compiler code, todo: remove this when its released
  */
 object RoutesCompilerExtra {
   import play.routes.compiler.templates._

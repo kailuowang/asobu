@@ -1,12 +1,8 @@
 package backend.endpoints
 
-import akka.actor.{ActorRefFactory, ActorSystem}
-import asobu.distributed.Action
-import asobu.distributed.Action.DistributedResult
-import asobu.distributed.Controller
-import asobu.distributed._
-import asobu.dsl.RequestExtractor
-import asobu.dsl.extractors.HeaderExtractors
+import akka.actor.ActorSystem
+import asobu.distributed.service.Action.DistributedResult
+import asobu.distributed.service.{BodyExtractor, EndpointRegistryClient, DistributedController, Controller}
 import play.api.mvc.Results._
 
 
