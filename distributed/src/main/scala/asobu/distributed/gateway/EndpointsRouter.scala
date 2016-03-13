@@ -3,17 +3,19 @@ package asobu.distributed.gateway
 import akka.actor.{Props, Actor}
 import asobu.distributed.gateway.Endpoint.Prefix
 import asobu.distributed.gateway.EndpointsRouter.Update
-
+import play.api.mvc.RequestHeader
+import play.api.mvc.Results.NotFound
 class EndpointsRouter extends Actor {
 
   def receive: Receive = handling(Map())
 
   def handling(endpoints: Map[Prefix, Endpoint]): Receive = {
     def toPartial(endpoint: Endpoint): Receive = {
-      case req @ endpoint(rp) ⇒
-        val rf = endpoint.handle(rp, req)
+      case req @ endpoint(requestParams) ⇒
+        val rf = endpoint.handle(requestParams, req)
         import context.dispatcher
-        rf.foreach(r ⇒ println("response back" + r))
+        val replyTo = sender
+        rf.foreach(replyTo ! _)
     }
 
     val endpointsHandlerPartial = //todo: improve performance by doing a prefix search first
@@ -23,7 +25,9 @@ class EndpointsRouter extends Actor {
       case Update(endpoints) ⇒
         val updated = endpoints.map(ep ⇒ ep.definition.prefix → ep).toMap
         context become handling(updated)
-    }: Receive) orElse endpointsHandlerPartial
+    }: Receive) orElse endpointsHandlerPartial orElse {
+      case req: RequestHeader ⇒ sender ! NotFound(s"Action or remote endpoints not found for ${req.path}")
+    }
   }
 
 }

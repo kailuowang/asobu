@@ -1,4 +1,5 @@
-package asobu.distributed
+package asobu.distributed.util
+
 
 import javax.inject.{Inject, Provider, Singleton}
 
@@ -30,7 +31,7 @@ case class MockRequest(path: String, headers: Headers = Headers()) extends Reque
 @Singleton
 class TestRequestsScheduler @Inject()(system: ActorSystem, gateway: Gateway) {
   import system.dispatcher
-  system.scheduler.schedule(Duration.Zero, 10.seconds, gateway.akkaRouterForEndpointsRouters, MockRequest("/ep1/a/1", headers = Headers("bar" -> "BBBB")) )
+  system.scheduler.schedule(Duration.Zero, 10.seconds, gateway.entryActor, MockRequest("/ep1/a/1", headers = Headers("bar" -> "BBBB")) )
 
 }
 

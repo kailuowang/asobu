@@ -37,6 +37,7 @@ lazy val frontend = (project in file("frontend"))
     .settings(
         name := "cluster-play-frontend",
         libraryDependencies ++= (Dependencies.frontend  ++ Seq(filters, cache)),
+        routesGenerator := InjectedRoutesGenerator,
         javaOptions ++= Seq(
             "-Djava.library.path=" + (baseDirectory.value.getParentFile / "backend" / "sigar" ).getAbsolutePath,
             "-Xms128m", "-Xmx1024m"),

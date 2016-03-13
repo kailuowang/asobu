@@ -3,6 +3,7 @@ package asobu.distributed.gateway
 import java.util.concurrent.ThreadLocalRandom
 
 import akka.actor.{PoisonPill, ActorRef, ActorRefFactory}
+import akka.routing.RoundRobinGroup
 import akka.util.Timeout
 import asobu.distributed.service.Action.{DistributedResult, DistributedRequest}
 import asobu.distributed.EndpointDefinition
@@ -38,10 +39,11 @@ case class Endpoint(definition: EndpointDefinition)(implicit arf: ActorRefFactor
     }
   }
 
-  def shutdown() = handlerRef ! PoisonPill
+  def shutdown(): Unit = if (handlerRef != handlerActor) handlerRef ! PoisonPill
 
   def unapply(request: Request[AnyContent]): Option[RouteParams] = routeExtractors.unapply(request)
 
+  //todo: think of a way to get rid of the ask below, e.g. create an new one-time actor for handling (just like ask)
   def handle(routeParams: RouteParams, request: Request[AnyContent]): Future[Result] = {
     import akka.pattern.ask
     import ExecutionContext.Implicits.global

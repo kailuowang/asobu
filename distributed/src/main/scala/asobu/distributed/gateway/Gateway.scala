@@ -11,7 +11,7 @@ import play.api.inject.Module
 
 @Singleton
 class Gateway @Inject() (implicit system: ActorSystem) {
-  val akkaRouterForEndpointsRouters: ActorRef = {
+  val entryActor: ActorRef = {
     val routerProps =
       SmallestMailboxPool(
         8,
@@ -23,7 +23,7 @@ class Gateway @Inject() (implicit system: ActorSystem) {
   val monitor = system.actorOf(
     EndpointsRegistryMonitor.props(
       DefaultEndpointsRegistry(),
-      akkaRouterForEndpointsRouters
+      entryActor
     )
   )
 
