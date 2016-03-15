@@ -1,6 +1,7 @@
 package asobu.distributed.service
 
 import asobu.distributed.RequestExtractorDefinition
+import asobu.distributed.util.SerializableTest
 import org.specs2.concurrent.ExecutionEnv
 import org.specs2.mutable.Specification
 import play.api.libs.json.{JsNumber, Json}
@@ -10,7 +11,7 @@ import play.core.routing.RouteParams
 import shapeless._
 import asobu.dsl.CatsInstances._
 
-object ExtractorsSpec extends Specification {
+object ExtractorsSpec extends Specification with SerializableTest {
   import RequestExtractorDefinition._
   import asobu.dsl.DefaultExtractorImplicits._
 
@@ -75,7 +76,6 @@ object ExtractorsSpec extends Specification {
     val remoteExtractorDef =
       Extractors.build[MyMessage](reqExtractor, bodyExtractor).remoteExtractorDef
 
-    val r = new ObjectOutputStream(new ByteArrayOutputStream()).writeObject(remoteExtractorDef)
-    r must be_!=(null)
+    isSerializable(remoteExtractorDef) must beTrue
   }
 }

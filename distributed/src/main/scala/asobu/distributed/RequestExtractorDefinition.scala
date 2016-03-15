@@ -69,13 +69,11 @@ object RequestExtractorDefinition extends PredefinedDefs {
 }
 
 object PredefinedDefs {
-
   @SerialVersionUID(1L)
   case class Header[T: Read](key: String)(implicit fbr: FallbackResult) extends RequestExtractorDefinition[T] {
     import concurrent.ExecutionContext.Implicits.global
     def apply() = HeaderExtractors.header(key)
   }
-
 }
 
 trait PredefinedDefs {

@@ -8,6 +8,9 @@ import akka.routing.{Group, RoundRobinGroup, FromConfig}
 
 import scala.concurrent.{Future, Promise}
 
+/**
+ * AkkaCluster enabled Akka routers
+ */
 object ClusterRouters {
 
   def roundRobin(routeePath: String, role: String): Props =

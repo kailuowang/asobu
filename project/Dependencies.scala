@@ -37,7 +37,8 @@ object Dependencies {
     "com.typesafe.akka" %% "akka-actor" % Versions.akka % "provided",
     "com.typesafe.akka" %% "akka-cluster" % Versions.akka % "provided",
     "com.typesafe.akka" %% "akka-cluster-metrics" % Versions.akka % "provided",
-    "com.typesafe.akka" %% "akka-distributed-data-experimental" % Versions.akka
+    "com.typesafe.akka" %% "akka-distributed-data-experimental" % Versions.akka,
+    "com.typesafe.akka" %% "akka-testkit" % Versions.akka % "test"
   )
 
   val test = Seq(

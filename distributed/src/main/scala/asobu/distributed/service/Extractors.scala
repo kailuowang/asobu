@@ -8,7 +8,7 @@ import asobu.distributed.service.Action.DistributedRequest
 import asobu.distributed.service.Extractors.{RouteParamsExtractor, BodyExtractor, RemoteExtractor}
 import asobu.dsl._
 import asobu.dsl.extractors.JsonBodyExtractor
-import asobu.dsl.util.HListOps.{CombineTo, RestOf2}
+import asobu.dsl.util.HListOps.{RestOf, CombineTo, RestOf2}
 import cats.{Monad, Functor, Eval}
 import cats.sequence.RecordSequencer
 import shapeless.ops.hlist.Prepend
@@ -76,20 +76,22 @@ object Extractors {
       }
     }
 
-    def apply[TRepr <: HList]()(implicit
+    def apply[LParamExtracted <: HList, LBody <: HList, TRepr <: HList](
+      bodyExtractor: BodyExtractor[LBody]
+    )(implicit
       gen: LabelledGeneric.Aux[TMessage, TRepr],
-      rpeb: RouteParamsExtractorBuilder[TRepr]): Extractors[TMessage] = new Extractors[TMessage] {
+      r: RestOf.Aux[TRepr, LBody, LParamExtracted],
+      combineTo: CombineTo[LParamExtracted, LBody, TRepr],
+      rpeb: RouteParamsExtractorBuilder[LParamExtracted]): Extractors[TMessage] =
+      apply(RequestExtractorDefinition.empty, bodyExtractor)
 
-      type LToSend = TRepr
-      type LParam = TRepr
-      type LExtra = HNil
-      val remoteExtractorDef = RemoteExtractorDef(rpeb, RequestExtractorDefinition.empty)
-
-      def localExtract(dr: DistributedRequest[LToSend]): ExtractResult[TMessage] = {
-        import scala.concurrent.ExecutionContext.Implicits.global
-        ExtractResult.pure(gen.from(dr.extracted))
-      }
-    }
+    def apply[TRepr <: HList]()(
+      implicit
+      gen: LabelledGeneric.Aux[TMessage, TRepr],
+      combineTo: CombineTo[TRepr, HNil, TRepr],
+      rpeb: RouteParamsExtractorBuilder[TRepr]
+    ): Extractors[TMessage] =
+      apply(BodyExtractor.empty)
   }
 
   def build[TMessage] = new builder[TMessage]
