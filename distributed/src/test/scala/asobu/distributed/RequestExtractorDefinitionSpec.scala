@@ -4,6 +4,8 @@ import org.specs2.concurrent.ExecutionEnv
 import org.specs2.mutable.Specification
 import play.api.test.FakeRequest
 import asobu.dsl.CatsInstances._
+import concurrent.ExecutionContext.Implicits.global
+
 import shapeless._
 import shapeless.record.Record
 class RequestExtractorDefinitionSpec extends Specification {

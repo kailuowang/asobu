@@ -7,6 +7,7 @@ import scala.concurrent.Future
 import scala.reflect._
 import cats.syntax.contravariant._
 import CatsInstances._
+import concurrent.ExecutionContext.Implicits.global
 
 object Directive {
 

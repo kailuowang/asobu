@@ -10,6 +10,8 @@ import play.api.mvc.Results._
 import scala.concurrent.Future
 import ExtractResult._
 import asobu.dsl.CatsInstances._
+import concurrent.ExecutionContext.Implicits.global
+
 import Extractor._
 
 class JsonBodyExtractorBuilder[T: Reads] {

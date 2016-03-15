@@ -7,7 +7,7 @@ import play.api.libs.json.{JsValue, Json, Reads, Writes}
 import play.api.mvc.{RequestHeader, Result, Results}
 import shapeless.HList
 
-import scala.concurrent.Future
+import scala.concurrent.{ExecutionContext, Future}
 import scala.reflect.ClassTag
 trait CompositionSyntax
     extends ProcessorOps
@@ -16,6 +16,8 @@ trait CompositionSyntax
     with ExtractorBuilderSyntax
     with CatsInstances
     with cats.syntax.AllSyntax {
+
+  import concurrent.ExecutionContext.Implicits.global
 
   class processorBuilder[RMT] {
     def using[T](t: T)(implicit b: AskableBuilder[T]) = Processor[RMT, Any](b(t))

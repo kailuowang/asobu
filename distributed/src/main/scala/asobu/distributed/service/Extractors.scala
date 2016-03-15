@@ -21,7 +21,7 @@ import shapeless.ops.hlist.Mapper
 import shapeless._, labelled.field
 import ExtractResult._
 import cats.syntax.all._
-import SerializableCatsInstances._
+import CatsInstances._
 import play.api.mvc._, play.api.mvc.Results._
 
 import scala.annotation.implicitNotFound
@@ -75,8 +75,25 @@ object Extractors {
         }
       }
     }
+
+    def apply[TRepr <: HList]()(implicit
+      gen: LabelledGeneric.Aux[TMessage, TRepr],
+      rpeb: RouteParamsExtractorBuilder[TRepr]): Extractors[TMessage] = new Extractors[TMessage] {
+
+      type LToSend = TRepr
+      type LParam = TRepr
+      type LExtra = HNil
+      val remoteExtractorDef = RemoteExtractorDef(rpeb, RequestExtractorDefinition.empty)
+
+      def localExtract(dr: DistributedRequest[LToSend]): ExtractResult[TMessage] = {
+        import scala.concurrent.ExecutionContext.Implicits.global
+        ExtractResult.pure(gen.from(dr.extracted))
+      }
+    }
   }
+
   def build[TMessage] = new builder[TMessage]
+
 }
 
 case class RemoteExtractorDef[LExtracted <: HList, LParamExtracted <: HList, LRemoteExtra <: HList](

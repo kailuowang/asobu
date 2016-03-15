@@ -37,14 +37,14 @@ object Backend extends App {
   )
 
   // Deploy actors and services
-  FactorialBackend startOn system
+  val factorialBE = FactorialBackend startOn system
   implicit val ao: Timeout = 30.seconds
 
   Cluster(system).registerOnMemberUp {
     implicit val rec: EndpointsRegistryClient = new EndpointsRegistryClientImp(DefaultEndpointsRegistry())
 
     val initControllers = Try {
-      TestMeEndpoint()
+      TestMeEndpoint(factorialBE)
     }
 
     initControllers.recover {

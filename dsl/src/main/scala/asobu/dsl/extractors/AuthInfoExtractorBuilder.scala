@@ -10,6 +10,7 @@ import shapeless._
 import shapeless.ops.record.Selector; import record._
 import scala.concurrent.Future
 import asobu.dsl.CatsInstances._
+import concurrent.ExecutionContext.Implicits.global
 
 class AuthInfoExtractorBuilder[AuthInfoT](buildAuthInfo: RequestHeader ⇒ Future[Either[String, AuthInfoT]]) {
 

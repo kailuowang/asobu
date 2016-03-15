@@ -8,7 +8,7 @@ import play.api.mvc.{AnyContent, Request}
 import play.api.test.FakeRequest
 import play.core.routing.RouteParams
 import shapeless._
-import asobu.dsl.SerializableCatsInstances._
+import asobu.dsl.CatsInstances._
 
 object ExtractorsSpec extends Specification {
   import RequestExtractorDefinition._

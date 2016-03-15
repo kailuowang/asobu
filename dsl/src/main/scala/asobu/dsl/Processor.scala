@@ -4,7 +4,7 @@ import play.api.mvc.Request
 
 import scala.concurrent.Future
 import CatsInstances._
-
+import concurrent.ExecutionContext.Implicits.global
 object Processor {
 
   def identity[T]: Processor[T, T] = r ⇒ Future.successful(r.body)

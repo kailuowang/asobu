@@ -1,6 +1,6 @@
 package asobu.distributed.gateway
 
-import asobu.dsl.SerializableCatsInstances._
+import asobu.dsl.CatsInstances._
 import cats.Monad
 import cats.data.Xor
 import play.api.mvc.Result

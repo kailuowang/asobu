@@ -9,6 +9,7 @@ import Extractor._
 import shapeless._, shapeless.record._
 import scala.concurrent.Future
 import asobu.dsl.CatsInstances._
+import concurrent.ExecutionContext.Implicits.global
 
 class AuthInfoExtractorBuilderSpec extends PlaySpecification {
   import asobu.dsl.DefaultImplicits._

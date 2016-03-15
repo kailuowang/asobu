@@ -7,6 +7,7 @@ import play.core.routing.RouteParams
 import shapeless._
 import shapeless.record._
 import asobu.dsl.CatsInstances._
+import concurrent.ExecutionContext.Implicits.global
 
 class RouteParamsExtractorSpec extends Specification {
 

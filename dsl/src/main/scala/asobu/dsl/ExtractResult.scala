@@ -10,8 +10,7 @@ import scala.annotation.implicitNotFound
 import scala.concurrent.{ExecutionContext, Future}
 import scala.util.Try
 import language.implicitConversions
-import SerializableCatsInstances._
-
+import CatsInstances._
 /**
  * This is basically a replacement of type alias `type ExtractResult[T] = XorT[Future, Result, T]`
  * A concrete class is needed as a work around for Unification and type alias related bugs
@@ -51,7 +50,7 @@ object ExtractResult {
 
   def fromOption[T](o: Option[T], ifNone: ⇒ Result) = XorT(Future.successful(Xor.fromOption(o, ifNone)))
 
-  def right[T](implicit ex: ExecutionContext) = XorT.right[Future, Result, T] _
+  def right[T](ft: Future[T])(implicit ex: ExecutionContext) = XorT.right[Future, Result, T](ft)
 
   def fromTry[T](t: Try[T])(implicit ifFailure: FallbackResult, ex: ExecutionContext): ExtractResult[T] =
     XorT.fromXor[Future](Xor.fromTry(t).leftMap(ifFailure))

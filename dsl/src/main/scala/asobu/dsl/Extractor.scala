@@ -11,6 +11,7 @@ import scala.util.{Failure, Success, Try}
 import ExtractResult._
 import cats.syntax.all._
 import CatsInstances._
+import concurrent.ExecutionContext.Implicits.global
 import cats.sequence._
 
 object Extractor extends ExtractorBuilderSyntax {

@@ -9,6 +9,7 @@ import ops.hlist._
 import ops.record._
 
 import CatsInstances._
+import concurrent.ExecutionContext.Implicits.global
 
 import scala.concurrent.Future
 

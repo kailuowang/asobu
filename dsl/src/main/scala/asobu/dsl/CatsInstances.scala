@@ -4,11 +4,7 @@ import cats.functor.Contravariant
 
 import scala.concurrent.{ExecutionContext, ExecutionContextExecutor}
 
-trait CatsInstances extends SerializableCatsInstances {
-  implicit val ex = scala.concurrent.ExecutionContext.Implicits.global
-}
-
-trait SerializableCatsInstances extends cats.std.AllInstances {
+trait CatsInstances extends cats.std.AllInstances {
   implicit def partialFunctionContravariant[R]: Contravariant[PartialFunction[?, R]] =
     new Contravariant[PartialFunction[?, R]] {
       def contramap[T1, T0](pa: PartialFunction[T1, R])(f: T0 ⇒ T1) = new PartialFunction[T0, R] {
@@ -20,8 +16,6 @@ trait SerializableCatsInstances extends cats.std.AllInstances {
 }
 
 object CatsInstances extends CatsInstances
-
-object SerializableCatsInstances extends SerializableCatsInstances
 
 case object LocalExecutionContext extends ExecutionContext with Serializable {
 
