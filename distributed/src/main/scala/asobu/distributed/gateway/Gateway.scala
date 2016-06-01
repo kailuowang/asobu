@@ -5,12 +5,13 @@ import javax.inject.{Provider, Inject, Singleton}
 import akka.actor.{Deploy, ActorRef, ActorSystem, Props}
 
 import akka.routing.{SmallestMailboxPool, DefaultOptimalSizeExploringResizer, RoundRobinPool}
+import asobu.distributed.CustomRequestExtractorDefinition.Interpreter
 import asobu.distributed.{SystemValidator, DefaultEndpointsRegistry, EndpointDefinition, EndpointsRegistry}
 import play.api.{Configuration, Environment}
 import play.api.inject.Module
 
 @Singleton
-class Gateway @Inject() (implicit system: ActorSystem, handlerBridgeProps: HandlerBridgeProps) {
+class Gateway @Inject() (implicit system: ActorSystem, handlerBridgeProps: HandlerBridgeProps, interpreter: Interpreter) {
 
   val validatorResult = SystemValidator.validate
   assert(validatorResult.isRight, validatorResult.left.get)
