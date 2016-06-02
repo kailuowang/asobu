@@ -24,8 +24,7 @@ trait RequestExtractorDefinition[T] extends Serializable {
 }
 
 trait CustomRequestExtractorDefinition[T] extends RequestExtractorDefinition[T] {
-  type DT = T
-  def apply(interpreter: Interpreter)(implicit ec: ExecutionContext): RequestExtractor[T] =
+  final def apply(interpreter: Interpreter)(implicit ec: ExecutionContext): RequestExtractor[T] =
     interpreter.interpret(this)
 }
 
@@ -33,6 +32,7 @@ object CustomRequestExtractorDefinition {
   trait Interpreter {
     def interpret[T](cred: CustomRequestExtractorDefinition[T]): RequestExtractor[T]
   }
+  val interpreterClassConfigKey = "extractorDefinitionInterpreterClass"
 }
 
 object RequestExtractorDefinition extends RequestExtractorDefinitionFunctions with RequestExtractorDefinitionOps {

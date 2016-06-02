@@ -25,13 +25,3 @@ class MyInterpreter @Inject() (implicit ec: ExecutionContext) extends Interprete
   }
 }
 
-
-
-class MyInterpreterModule extends AbstractModule {
-  def configure() = {
-
-    bind(classOf[Interpreter])
-      .to(classOf[MyInterpreter])
-
-  }
-}
