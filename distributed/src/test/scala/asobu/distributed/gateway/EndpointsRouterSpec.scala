@@ -32,7 +32,7 @@ class EndpointsRouterSpec extends SpecWithActorCluster with FakeRequests {
   val worker2 = TestProbe()
   val createEndpointDef = (route: Route, prefix: Prefix) ⇒ {
     val path = if (route.path.toString.contains("ep1")) worker1.ref.path else worker2.ref.path
-    EndpointDefinition(prefix, route, path.handlerAddress, role, None, None)
+    EndpointDefinition(route, path.handlerAddress, role, None)
   }
 
   val endpointDefs = EndpointUtil.parseEndpoints(routeString)(createEndpointDef)

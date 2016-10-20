@@ -7,7 +7,7 @@ import play.api.inject.Binding
 import scala.reflect.ClassTag
 import javax.inject.{Provider, Inject, Singleton}
 import akka.actor.{ActorRefFactory, ActorSystem}
-import asobu.distributed.{DefaultEndpointsRegistry, SystemValidator}
+import asobu.distributed.{SystemValidator}
 import play.api.{Configuration, Environment}
 import play.api.inject.Module
 import scala.concurrent.ExecutionContext
@@ -22,20 +22,20 @@ class Gateway @Inject() (
   val validatorResult = SystemValidator.validate(system)
   assert(validatorResult.isRight, validatorResult.left.get)
 
-  private val registry: DefaultEndpointsRegistry = DefaultEndpointsRegistry(system)
+  //  private val registry: DefaultEndpointsRegistry = DefaultEndpointsRegistry(system)
 
-  system.actorOf(
-    EndpointsRouterUpdater.props(
-      registry,
-      endpointsRouter,
-      endpointFactoryProvider()
-    ), "asobu-gateway-routers-updater"
-  )
+  //  system.actorOf(
+  //    EndpointsRouterUpdater.props(
+  //      registry,
+  //      endpointsRouter,
+  //      endpointFactoryProvider()
+  //    ), "asobu-gateway-routers-updater"
+  //  )
 
-  system.actorOf(ClusterHealthCheck.props(registry), "asobu-cluster-health-monitor")
-
-  lazy val apiDocsRegistry =
-    system.actorOf(ApiDocumentationRegistry.props(registry), "asobu-api-documentation-registry")
+  //  system.actorOf(ClusterHealthCheck.props(registry), "asobu-cluster-health-monitor")
+  //
+  //  lazy val apiDocsRegistry =
+  //    system.actorOf(ApiDocumentationRegistry.props(registry), "asobu-api-documentation-registry")
 
 }
 

@@ -35,8 +35,11 @@ trait EndpointHandler {
  * @param bridgeProps a factory that creates the prop for an bridge actor between
  *                    gateway router and actual handling service actor
  */
-abstract class Endpoint(
+case class Endpoint(
+    val prefix: Prefix,
     val definition: EndpointDefinition,
+    enricher: RequestEnricher,
+    handlerHosts: Set[HandlerHost],
     bridgeProps: HandlerBridgeProps = HandlerBridgeProps.default
 )(
     implicit
@@ -103,8 +106,12 @@ abstract class Endpoint(
   }
 
   private lazy val routeExtractors: ParamsExtractor = {
-    val localParts = if (definition.path.nonEmpty) StaticPart(definition.defaultPrefix) +: definition.pathPattern.parts else Nil
-    routing.Route(definition.verb.value, routing.PathPattern(toCPart(StaticPart(definition.prefix.value) +: localParts)))
+    val defaultPrefix: String = {
+      if (prefix.value.endsWith("/")) "" else "/"
+    }
+
+    val localParts = if (definition.path.nonEmpty) StaticPart(defaultPrefix) +: definition.pathPattern.parts else Nil
+    routing.Route(definition.verb.value, routing.PathPattern(toCPart(StaticPart(prefix.value) +: localParts)))
   }
 
   private def toCPart(parts: Seq[PathPart]): Seq[routing.PathPart] = parts map {
@@ -112,13 +119,12 @@ abstract class Endpoint(
     case StaticPart(v)        ⇒ routing.StaticPart(v)
   }
 
-  protected val enricher: RequestEnricher
 }
 
 object Endpoint {
 
   trait EndpointFactory {
-    def apply(endpointDef: EndpointDefinition): Endpoint
+    def apply(endpointDefSet: EndpointDefinitionSet): EndpointSet
   }
 
   object EndpointFactory {
@@ -130,9 +136,16 @@ object Endpoint {
   class EndpointFactoryImpl[T <: RequestEnricherDefinition: Interpreter: ClassTag](bridgeProps: HandlerBridgeProps)(implicit
     arf: ActorRefFactory,
       ec: ExecutionContext) extends EndpointFactory {
-    def apply(endpointDef: EndpointDefinition): Endpoint = new Endpoint(endpointDef, bridgeProps) {
-      override protected val enricher: RequestEnricher =
-        endpointDef.enricherDef.fold[RequestEnricher](Extractor(identity))(Interpreter.interpret[T])
+
+    def apply(set: EndpointDefinitionSet): EndpointSet = {
+
+      val endpoints = set.endpoints.map { endpointDef ⇒
+        val enricher: RequestEnricher =
+          endpointDef.enricherDef.fold[RequestEnricher](Extractor(identity))(Interpreter.interpret[T])
+        new Endpoint(set.prefix, endpointDef, enricher, Set(set.handlerHost), bridgeProps)
+      }
+
+      EndpointSet(set.prefix, endpoints, Set(set.handlerHost), set.version)
     }
   }
 }

@@ -2,7 +2,7 @@ package asobu.distributed
 
 trait RequestEnricherDefinition extends Serializable
 
-trait RequestEnricherDefinitionCombinator extends RequestEnricherDefinition
+sealed trait RequestEnricherDefinitionCombinator extends RequestEnricherDefinition
 
 object RequestEnricherDefinition {
 

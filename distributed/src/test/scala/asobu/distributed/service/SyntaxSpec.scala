@@ -5,10 +5,8 @@ import akka.actor.Actor.Receive
 import akka.stream.ActorMaterializer
 import akka.util.Timeout
 import asobu.distributed.FakeRequests
-import asobu.distributed.protocol.Prefix
-import asobu.distributed.protocol.EndpointDefinition
+import asobu.distributed.protocol._
 import asobu.distributed.service.DRequestExtractorSpec._
-import asobu.distributed.protocol.{DRequest, RequestParams}
 import asobu.distributed.util.{MockRoute, ScopeWithActor, SerializableTest, SpecWithActorCluster}
 
 import asobu.dsl.extractors.JsonBodyExtractor
@@ -30,11 +28,7 @@ class SyntaxSpec extends SpecWithActorCluster with FakeRequests with Serializabl
   implicit val format = Json.format[Input]
   import asobu.dsl.DefaultExtractorImplicits._
   implicit val erc: EndpointsRegistryClient = new EndpointsRegistryClient {
-    def add(endpointDefinition: EndpointDefinition): Future[Unit] = Future.successful(())
-
-    def prefix: Prefix = Prefix("/")
-
-    def buildNumber: Option[BuildNumber] = None
+    override def add(endpointDefinitionSet: EndpointDefinitionSet): Future[EndpointDefinitionSet] = ???
   }
 
   implicit val ao: Timeout = 1.seconds
@@ -102,7 +96,7 @@ trait SyntaxScope extends ScopeWithActor with Controller with Syntax {
 
   def endpointOf(action: Action): EndpointDefinition = {
     val route = MockRoute(handlerClass = action.getClass.getName, pathParts = Nil)
-    action.endpointDefinition(route, Prefix.root, None)
+    action.endpointDefinition(route)
   }
 
   def actions: List[Action] = Nil

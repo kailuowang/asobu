@@ -4,7 +4,7 @@ import akka.actor.{ActorRef, ActorRefFactory, ActorSystem}
 import akka.stream.ActorMaterializer
 import akka.util.Timeout
 import asobu.distributed.gateway.Endpoint.{EndpointFactory}
-import asobu.distributed.protocol.Prefix
+import asobu.distributed.protocol.{Version, Prefix, DRequest, DResult}
 import asobu.distributed.gateway.enricher.{Interpreter, DisabledInterpreter}
 import asobu.distributed.gateway._
 import asobu.distributed.service._
@@ -13,7 +13,6 @@ import asobu.dsl.{ExtractResult, Extractor, RequestExtractor}
 import play.api.libs.json.{JsNumber, JsString, Json}
 import play.api.mvc.RawBuffer
 import play.api.mvc.Results._
-import asobu.distributed.protocol.{DRequest, DResult}
 import concurrent.duration._
 
 import scala.util.Random
@@ -232,6 +231,7 @@ object End2EndSpec {
       }
 
       case class App()(implicit system: ActorSystem) {
+        implicit val version: Version = Version.zero
         implicit val mat = ActorMaterializer()
         val started = init(Prefix("/api"))(
           TestController(testServiceBackendRef(system))

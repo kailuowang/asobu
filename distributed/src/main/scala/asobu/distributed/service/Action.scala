@@ -5,7 +5,7 @@ import akka.cluster.Cluster
 import Action.UnrecognizedMessage
 import akka.stream.Materializer
 import akka.util.ByteString
-import asobu.distributed.protocol.{HandlerAddress, EndpointDefinition, Prefix}
+import asobu.distributed.protocol.{HandlerPath, EndpointDefinition, Prefix}
 import asobu.distributed.service.extractors.DRequestExtractor
 import asobu.distributed.protocol.{DResult, DRequest}
 import asobu.distributed._
@@ -31,17 +31,13 @@ trait Action {
   def enricherDefinition: Option[RequestEnricherDefinition]
 
   def endpointDefinition(
-    route: Route,
-    prefix: Prefix,
-    version: Option[Int]
+    route: Route
   )(implicit sys: ActorSystem): EndpointDefinition = {
     EndpointDefinition(
-      prefix,
       route,
       handlerActor().path.handlerAddress,
       Cluster(sys).selfRoles.head,
-      enricherDefinition,
-      version
+      enricherDefinition
     )
   }
 

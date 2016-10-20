@@ -2,9 +2,9 @@ package asobu.distributed.util
 
 import akka.actor.ActorRefFactory
 import asobu.distributed.gateway.Endpoint.EndpointFactory
-import asobu.distributed.gateway.HandlerBridgeProps
+import asobu.distributed.gateway.{Endpoint, HandlerBridgeProps}
 import asobu.distributed.gateway.enricher.DisabledInterpreter
-import asobu.distributed.protocol.{StaticPathPart, PathPart, Prefix, EndpointDefinition}
+import asobu.distributed.protocol._
 import asobu.distributed.service.EndpointRoutesParser
 
 import play.routes.compiler.{StaticPart, PathPattern, Route}
@@ -21,13 +21,28 @@ object EndpointUtil {
 
   }
 
-  def endpointOf(endpointDefinition: EndpointDefinition)(
+  def endpointSetOf(endpointDefinitionSet: EndpointDefinitionSet)(
     implicit
     arf: ActorRefFactory,
     ex: ExecutionContext
   ) = {
     val ef = endpointFactory
-    ef(endpointDefinition)
+    ef(endpointDefinitionSet)
+  }
+
+  def endpointOf(endpointDefinition: EndpointDefinition)(
+    implicit
+    arf: ActorRefFactory,
+    ex: ExecutionContext
+  ): Endpoint = {
+    val set = EndpointDefinitionSet(
+      Prefix.root,
+      Set(endpointDefinition),
+      HandlerHost("akka://localhost:2712"),
+      Version.zero,
+      Array()
+    )
+    endpointSetOf(set).endpoints.head
   }
 
   def endpointFactory(
